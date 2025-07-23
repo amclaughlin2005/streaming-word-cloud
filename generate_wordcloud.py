@@ -721,6 +721,7 @@ def main():
     
     # Get CSV file path from environment or use default
     csv_path = os.environ.get('CSV_FILE_PATH', 'data/sample_data.csv')
+    print(f"Python script using CSV file path: {csv_path}")
     
     # Check for sentiment analysis flag
     sentiment_analysis = False

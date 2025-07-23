@@ -63,20 +63,28 @@ async function generateWordCloud(verbsOnly = false, questionTypes = false, senti
             }
         }
 
+        // Debug: log the CSV file path being passed
+        console.log(`Spawning Python script with CSV_FILE_PATH: ${csvFilePath}`);
+        
         // Run Python script to generate word cloud
         const pythonProcess = spawn('python3', args, {
-            env: { ...process.env, CSV_FILE_PATH: csvFilePath }
+            env: { ...process.env, CSV_FILE_PATH: csvFilePath },
+            cwd: __dirname
         });
 
         let output = '';
         let errorOutput = '';
 
         pythonProcess.stdout.on('data', (data) => {
-            output += data.toString();
+            const dataStr = data.toString();
+            output += dataStr;
+            console.log('Python stdout:', dataStr.trim());
         });
 
         pythonProcess.stderr.on('data', (data) => {
-            errorOutput += data.toString();
+            const dataStr = data.toString();
+            errorOutput += dataStr;
+            console.log('Python stderr:', dataStr.trim());
         });
 
         pythonProcess.on('close', (code) => {
