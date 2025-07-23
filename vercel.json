@@ -3,11 +3,15 @@
   "builds": [
     {
       "src": "server.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "generate_wordcloud.py",
-      "use": "@vercel/python"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "public/**",
+          "data/**",
+          "generate_wordcloud.py",
+          "requirements.txt"
+        ]
+      }
     }
   ],
   "routes": [
@@ -20,18 +24,9 @@
       "dest": "/server.js"
     }
   ],
-  "functions": {
-    "server.js": {
-      "includeFiles": [
-        "public/**",
-        "data/**",
-        "generate_wordcloud.py"
-      ]
-    }
-  },
   "env": {
     "CSV_FILE_PATH": "data/demo_feedback.csv",
     "POLLING_INTERVAL": "20000",
-    "PORT": "3000"
+    "NODE_ENV": "production"
   }
 }
