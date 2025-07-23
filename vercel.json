@@ -1,9 +1,15 @@
 {
-  "functions": {
-    "api/wordcloud.py": {
-      "runtime": "@vercel/python@3.9.16"
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/wordcloud.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "api/index.js", 
+      "use": "@vercel/node"
     }
-  },
+  ],
   "routes": [
     {
       "src": "/api/wordcloud-data",
@@ -25,10 +31,5 @@
       "src": "/(.*\\.(css|js|png|jpg|jpeg|gif|ico))",
       "dest": "/public/$1"
     }
-  ],
-  "env": {
-    "CSV_FILE_PATH": "data/demo_feedback.csv",
-    "POLLING_INTERVAL": "20000",
-    "NODE_ENV": "production"
-  }
+  ]
 }
