@@ -2,10 +2,92 @@ class WordCloudApp {
     constructor() {
         this.autoRefreshInterval = null;
         this.lastTimestamp = null;
+        this.clerk = null;
+        this.user = null;
         
-        this.initializeElements();
-        this.attachEventListeners();
+        this.initializeAuth();
+    }
+
+    async initializeAuth() {
+        try {
+            // Fetch Clerk configuration from server
+            const configResponse = await fetch('/api/clerk-config');
+            const config = await configResponse.json();
+            
+            if (window.Clerk && config.publishableKey !== 'pk_test_YOUR_CLERK_PUBLISHABLE_KEY') {
+                await window.Clerk.load({
+                    publishableKey: config.publishableKey,
+                });
+                
+                this.clerk = window.Clerk;
+                this.initializeElements();
+                this.attachEventListeners();
+                this.setupAuth();
+            } else {
+                throw new Error('Clerk configuration not found');
+            }
+        } catch (error) {
+            console.error('Failed to initialize Clerk:', error);
+            // Show a user-friendly message
+            document.getElementById('auth-section').innerHTML = `
+                <div class="auth-container">
+                    <h2>Authentication Setup Required</h2>
+                    <p>Please configure your Clerk keys in the .env file</p>
+                    <p>1. Copy .env.example to .env</p>
+                    <p>2. Get your keys from <a href="https://dashboard.clerk.com" target="_blank">Clerk Dashboard</a></p>
+                    <p>3. Update CLERK_PUBLISHABLE_KEY in your .env file</p>
+                </div>
+            `;
+        }
+    }
+
+    async setupAuth() {
+        if (this.clerk.user) {
+            // User is already signed in
+            this.handleUserSignedIn();
+        } else {
+            // User needs to sign in
+            this.showSignIn();
+        }
+
+        // Listen for auth state changes
+        this.clerk.addListener('user', (user) => {
+            if (user) {
+                this.handleUserSignedIn();
+            } else {
+                this.handleUserSignedOut();
+            }
+        });
+    }
+
+    showSignIn() {
+        document.getElementById('auth-section').style.display = 'flex';
+        document.getElementById('main-app').style.display = 'none';
+        
+        // Mount the Clerk sign-in component
+        this.clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
+            routing: 'hash'
+        });
+    }
+
+    handleUserSignedIn() {
+        this.user = this.clerk.user;
+        document.getElementById('auth-section').style.display = 'none';
+        document.getElementById('main-app').style.display = 'block';
+        
+        // Update user display
+        const userButton = document.getElementById('user-button');
+        if (userButton && this.user) {
+            userButton.textContent = `Welcome, ${this.user.firstName || this.user.emailAddresses[0].emailAddress}!`;
+        }
+        
         this.startApplication();
+    }
+
+    handleUserSignedOut() {
+        this.user = null;
+        this.showSignIn();
+        this.stopAutoRefresh();
     }
 
     initializeElements() {
@@ -100,6 +182,12 @@ class WordCloudApp {
                 this.hideSettings();
             }
         });
+
+        // Sign out button
+        const signOutBtn = document.getElementById('sign-out-btn');
+        if (signOutBtn) {
+            signOutBtn.addEventListener('click', () => this.signOut());
+        }
     }
 
     async startApplication() {
@@ -145,7 +233,22 @@ class WordCloudApp {
                 console.log(`Fetching all words cloud: URL=${url}`);
             }
             
-            const response = await fetch(url);
+            // Get session token for authentication
+            const sessionToken = await this.clerk.session?.getToken();
+            
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${sessionToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.status === 401) {
+                // Token expired or invalid, redirect to sign in
+                this.signOut();
+                return;
+            }
+            
             const result = await response.json();
             console.log('API Response:', result);
 
@@ -371,6 +474,15 @@ class WordCloudApp {
             case 'default':
                 this.resetSettings();
                 break;
+        }
+    }
+
+    async signOut() {
+        try {
+            await this.clerk.signOut();
+            this.handleUserSignedOut();
+        } catch (error) {
+            console.error('Error signing out:', error);
         }
     }
 }

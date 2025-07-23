@@ -211,6 +211,13 @@ app.get('/api/sentiment-data', requireAuth, async (req, res) => {
     }
 });
 
+// Get Clerk configuration
+app.get('/api/clerk-config', (req, res) => {
+    res.json({ 
+        publishableKey: process.env.CLERK_PUBLISHABLE_KEY || 'pk_test_YOUR_CLERK_PUBLISHABLE_KEY'
+    });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
