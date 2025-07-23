@@ -1,0 +1,37 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "generate_wordcloud.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/server.js"
+    }
+  ],
+  "functions": {
+    "server.js": {
+      "includeFiles": [
+        "public/**",
+        "data/**",
+        "generate_wordcloud.py"
+      ]
+    }
+  },
+  "env": {
+    "CSV_FILE_PATH": "data/demo_feedback.csv",
+    "POLLING_INTERVAL": "20000",
+    "PORT": "3000"
+  }
+}

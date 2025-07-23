@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Streaming Word Cloud</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>📊 Streaming Word Cloud</h1>
+            <p>Real-time word visualization from CSV data</p>
+        </header>
+
+        <div class="controls">
+            <button id="refreshBtn" class="btn btn-primary">🔄 Refresh Now</button>
+            <div class="status-indicator">
+                <span id="statusDot" class="status-dot"></span>
+                <span id="statusText">Connecting...</span>
+            </div>
+            <div class="auto-refresh">
+                <label>
+                    <input type="checkbox" id="autoRefresh" checked>
+                    Auto-refresh every 20s
+                </label>
+            </div>
+            <div class="word-filter">
+                <label>
+                    <input type="checkbox" id="verbsOnly">
+                    Show verbs only
+                </label>
+            </div>
+            <div class="question-types-filter">
+                <label>
+                    <input type="checkbox" id="questionTypes">
+                    Analyze question types
+                </label>
+            </div>
+            <div class="sentiment-filter">
+                <label>
+                    <input type="checkbox" id="sentimentAnalysis">
+                    Analyze customer sentiment
+                </label>
+            </div>
+            <div class="settings-toggle">
+                <button id="settingsBtn" class="btn btn-secondary">⚙️ Settings</button>
+            </div>
+        </div>
+
+        <!-- Settings Panel -->
+        <div id="settingsPanel" class="settings-panel" style="display: none;">
+            <div class="settings-header">
+                <h3>Verb Detection Settings</h3>
+                <button id="closeSettings" class="close-btn">×</button>
+            </div>
+            
+            <div class="settings-content">
+                <div class="setting-group">
+                    <h4>Verb Types</h4>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" id="includeBase" checked> Base form (run, eat, go)</label>
+                        <label><input type="checkbox" id="includePast" checked> Past tense (ran, ate, went)</label>
+                        <label><input type="checkbox" id="includeGerund" checked> Gerunds/Present participle (running, eating)</label>
+                        <label><input type="checkbox" id="includePastParticiple" checked> Past participle (run, eaten, gone)</label>
+                        <label><input type="checkbox" id="includePresentNon3rd" checked> Present non-3rd person (I/you run)</label>
+                        <label><input type="checkbox" id="includePresent3rd" checked> Present 3rd person (he/she runs)</label>
+                        <label><input type="checkbox" id="includeModals"> Modal verbs (can, will, should, must)</label>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h4>Filtering Options</h4>
+                    <div class="input-group">
+                        <label for="minLength">Minimum word length:</label>
+                        <input type="number" id="minLength" min="1" max="10" value="3">
+                    </div>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" id="allowContractions"> Include contractions (don't, can't)</label>
+                        <label><input type="checkbox" id="strictStopWords" checked> Use strict stop word filtering</label>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h4>Presets</h4>
+                    <div class="preset-buttons">
+                        <button class="btn btn-preset" data-preset="inclusive">More Inclusive</button>
+                        <button class="btn btn-preset" data-preset="selective">More Selective</button>
+                        <button class="btn btn-preset" data-preset="actions">Action Words Only</button>
+                        <button class="btn btn-preset" data-preset="default">Default</button>
+                    </div>
+                </div>
+
+                <div class="settings-actions">
+                    <button id="applySettings" class="btn btn-primary">Apply Settings</button>
+                    <button id="resetSettings" class="btn btn-secondary">Reset to Default</button>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="word-cloud-container">
+            <div id="wordCloud" class="word-cloud"></div>
+            <div id="loadingSpinner" class="loading-spinner">
+                <div class="spinner"></div>
+                <p>Loading word cloud...</p>
+            </div>
+            <div id="errorMessage" class="error-message" style="display: none;">
+                <p>❌ Failed to load data. Please check your CSV file exists and contains text data.</p>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>💡 Add text data to your CSV file and watch words come to life!</p>
+        </footer>
+    </div>
+
+    <script src="wordcloud.js"></script>
+</body>
+</html> 
