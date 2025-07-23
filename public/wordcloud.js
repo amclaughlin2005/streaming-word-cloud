@@ -10,8 +10,8 @@ class WordCloudApp {
 
     async initializeAuth() {
         try {
-            // TEMPORARY BYPASS - skip authentication for now
-            console.log('Bypassing authentication for development');
+            // BYPASS authentication - skip for both development and production
+            console.log('Bypassing authentication - using development mode');
             this.initializeElements();
             this.attachEventListeners();
             this.handleUserSignedIn();
