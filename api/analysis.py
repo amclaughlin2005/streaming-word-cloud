@@ -10,11 +10,13 @@ from http.server import BaseHTTPRequestHandler
 # Add the parent directory to sys.path to import our modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Import our existing wordcloud generation functions
+# Import our existing analysis functions
 try:
     from generate_wordcloud import (
         load_and_process_csv, 
         generate_wordcloud, 
+        generate_sentiment_bar_chart,
+        generate_question_types_bar_chart,
         ensure_nltk_data,
         get_default_verb_settings
     )
@@ -65,12 +67,13 @@ class handler(BaseHTTPRequestHandler):
             parsed_url = urllib.parse.urlparse(self.path)
             query_params = urllib.parse.parse_qs(parsed_url.query)
             
-            print(f"API called with query: {query_params}")
+            print(f"Analysis API called with query: {query_params}")
             
-            # Determine which type of word cloud to generate
+            # Determine analysis type from query parameters
+            analysis_type = query_params.get('type', ['wordcloud'])[0].lower()
             verbs_only = query_params.get('verbs', ['false'])[0].lower() == 'true'
             
-            print(f"Generating word cloud: verbs_only={verbs_only}")
+            print(f"Analysis type: {analysis_type}, verbs_only: {verbs_only}")
             
             # Get data from Vercel Blob or local file
             data, data_source = get_data_from_blob()
@@ -97,54 +100,90 @@ class handler(BaseHTTPRequestHandler):
                 temp_csv_path = temp_file.name
             
             try:
-                # Parse verb settings if provided
-                settings = None
-                if verbs_only:
-                    settings = get_default_verb_settings()
-                    # You can enhance this to parse settings from query params if needed
-                
-                # Generate word cloud
-                print(f"Processing CSV file: {temp_csv_path}")
-                processed_text = load_and_process_csv(temp_csv_path, verbs_only, False, False, settings)
-                
-                if not processed_text:
-                    raise Exception("No text was processed from the CSV data")
-                
-                print(f"Processed text length: {len(processed_text)}")
-                
-                # Generate the word cloud image
-                output_file = 'public/wordcloud_verbs.png' if verbs_only else 'public/wordcloud_all.png'
-                image_path = f"/{os.path.basename(output_file)}"
-                
                 # Ensure public directory exists
                 os.makedirs('public', exist_ok=True)
                 
-                success = generate_wordcloud(processed_text, output_file)
+                response = None
                 
-                if not success:
-                    raise Exception("Word cloud generation failed")
+                if analysis_type == 'sentiment':
+                    # Generate sentiment analysis
+                    print(f"Processing sentiment analysis: {temp_csv_path}")
+                    chart_data = generate_sentiment_bar_chart(temp_csv_path)
+                    
+                    if not chart_data:
+                        raise Exception("Sentiment analysis failed - no data returned")
+                    
+                    response = {
+                        'success': True,
+                        'message': 'Sentiment analysis completed successfully',
+                        'data': chart_data,
+                        'recordCount': len(data),
+                        'dataSource': data_source,
+                        'analysis': 'sentiment'
+                    }
+                    
+                elif analysis_type == 'question-types':
+                    # Generate question types analysis
+                    print(f"Processing question types analysis: {temp_csv_path}")
+                    chart_data = generate_question_types_bar_chart(temp_csv_path)
+                    
+                    if not chart_data:
+                        raise Exception("Question types analysis failed - no data returned")
+                    
+                    response = {
+                        'success': True,
+                        'message': 'Question types analysis completed successfully',
+                        'data': chart_data,
+                        'recordCount': len(data),
+                        'dataSource': data_source,
+                        'analysis': 'question-types'
+                    }
+                    
+                else:  # Default to wordcloud
+                    # Parse verb settings if provided
+                    settings = None
+                    if verbs_only:
+                        settings = get_default_verb_settings()
+                    
+                    # Generate word cloud
+                    print(f"Processing word cloud: {temp_csv_path}")
+                    processed_text = load_and_process_csv(temp_csv_path, verbs_only, False, False, settings)
+                    
+                    if not processed_text:
+                        raise Exception("No text was processed from the CSV data")
+                    
+                    print(f"Processed text length: {len(processed_text)}")
+                    
+                    # Generate the word cloud image
+                    output_file = 'public/wordcloud_verbs.png' if verbs_only else 'public/wordcloud_all.png'
+                    image_path = f"/{os.path.basename(output_file)}"
+                    
+                    success = generate_wordcloud(processed_text, output_file)
+                    
+                    if not success:
+                        raise Exception("Word cloud generation failed")
+                    
+                    # Verify the image was created
+                    if not os.path.exists(output_file):
+                        raise Exception(f"Expected output file not found: {output_file}")
+                    
+                    response = {
+                        'success': True,
+                        'message': 'Word cloud generated successfully',
+                        'imagePath': image_path,
+                        'recordCount': len(data),
+                        'dataSource': data_source,
+                        'mode': 'verbs' if verbs_only else 'all',
+                        'textLength': len(processed_text)
+                    }
                 
-                # Verify the image was created
-                if not os.path.exists(output_file):
-                    raise Exception(f"Expected output file not found: {output_file}")
-                
-                print(f"Word cloud generated successfully: {output_file}")
+                print(f"Analysis completed successfully")
                 
                 # Return success response
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
-                
-                response = {
-                    'success': True,
-                    'message': 'Word cloud generated successfully',
-                    'imagePath': image_path,
-                    'recordCount': len(data),
-                    'dataSource': data_source,
-                    'mode': 'verbs' if verbs_only else 'all',
-                    'textLength': len(processed_text)
-                }
                 
                 self.wfile.write(json.dumps(response).encode())
                 
@@ -156,7 +195,7 @@ class handler(BaseHTTPRequestHandler):
                     pass
                     
         except Exception as e:
-            print(f"Error in word cloud generation: {str(e)}")
+            print(f"Error in analysis: {str(e)}")
             
             self.send_response(500)
             self.send_header('Content-Type', 'application/json')
@@ -165,7 +204,7 @@ class handler(BaseHTTPRequestHandler):
             
             error_response = {
                 'success': False,
-                'error': 'Failed to generate word cloud',
+                'error': 'Failed to generate analysis',
                 'details': str(e),
                 'dataSource': data_source if 'data_source' in locals() else 'unknown'
             }

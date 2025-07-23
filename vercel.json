@@ -3,15 +3,15 @@
   "routes": [
     {
       "src": "/api/wordcloud-data",
-      "dest": "/api/wordcloud-data.py"
+      "dest": "/api/analysis.py?type=wordcloud"
     },
     {
       "src": "/api/question-types-data", 
-      "dest": "/api/question-types-data.py"
+      "dest": "/api/analysis.py?type=question-types"
     },
     {
       "src": "/api/sentiment-data",
-      "dest": "/api/sentiment-data.py"
+      "dest": "/api/analysis.py?type=sentiment"
     },
     {
       "src": "/api/upload-data",
@@ -31,13 +31,7 @@
     }
   ],
   "functions": {
-    "api/wordcloud-data.py": {
-      "maxDuration": 30
-    },
-    "api/question-types-data.py": {
-      "maxDuration": 30
-    },
-    "api/sentiment-data.py": {
+    "api/analysis.py": {
       "maxDuration": 30
     },
     "api/upload-data.js": {

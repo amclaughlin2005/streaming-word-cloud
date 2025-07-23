@@ -5,6 +5,8 @@ import re
 import os
 import sys
 from wordcloud import WordCloud
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend to reduce dependencies
 import matplotlib.pyplot as plt
 from collections import Counter
 import nltk
