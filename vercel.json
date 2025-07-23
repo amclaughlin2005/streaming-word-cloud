@@ -3,19 +3,23 @@
   "routes": [
     {
       "src": "/api/wordcloud-data",
-      "dest": "/api/wordcloud-data.js"
+      "dest": "/api/wordcloud-data.py"
     },
     {
       "src": "/api/question-types-data", 
-      "dest": "/api/question-types-data.js"
+      "dest": "/api/question-types-data.py"
     },
     {
       "src": "/api/sentiment-data",
-      "dest": "/api/sentiment-data.js"
+      "dest": "/api/sentiment-data.py"
     },
     {
       "src": "/api/upload-data",
       "dest": "/api/upload-data.js"
+    },
+    {
+      "src": "/api/init-data",
+      "dest": "/api/init-data.js"
     },
     {
       "src": "/(.*\\.(css|js|png|jpg|jpeg|gif|ico|svg))",
@@ -27,16 +31,22 @@
     }
   ],
   "functions": {
-    "api/wordcloud-data.js": {
+    "api/wordcloud-data.py": {
+      "runtime": "python3.12",
       "maxDuration": 30
     },
-    "api/question-types-data.js": {
+    "api/question-types-data.py": {
+      "runtime": "python3.12",
       "maxDuration": 30
     },
-    "api/sentiment-data.js": {
+    "api/sentiment-data.py": {
+      "runtime": "python3.12",
       "maxDuration": 30
     },
     "api/upload-data.js": {
+      "maxDuration": 30
+    },
+    "api/init-data.js": {
       "maxDuration": 30
     },
     "api/index.js": {
