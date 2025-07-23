@@ -1,0 +1,50 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/*.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "generate_wordcloud.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/wordcloud-data",
+      "dest": "/api/wordcloud-data.js"
+    },
+    {
+      "src": "/api/question-types-data", 
+      "dest": "/api/question-types-data.js"
+    },
+    {
+      "src": "/api/sentiment-data",
+      "dest": "/api/sentiment-data.js"
+    },
+    {
+      "src": "/(.*\\.(css|js|png|jpg|jpeg|gif|ico|svg))",
+      "dest": "/public/$1"
+    },
+    {
+      "src": "/",
+      "dest": "/api/index.js"
+    }
+  ],
+  "functions": {
+    "api/wordcloud-data.js": {
+      "maxDuration": 30
+    },
+    "api/question-types-data.js": {
+      "maxDuration": 30
+    },
+    "api/sentiment-data.js": {
+      "maxDuration": 30
+    }
+  },
+  "env": {
+    "CSV_FILE_PATH": "data/demo_feedback.csv",
+    "NODE_ENV": "production"
+  }
+}
