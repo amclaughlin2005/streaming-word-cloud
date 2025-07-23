@@ -231,7 +231,7 @@ def analyze_question_types(questions):
     return question_type_counts
 
 def analyze_sentiment(questions):
-    """Analyze sentiment of questions and return emoji-based text for word cloud."""
+    """Analyze sentiment of questions and return sentiment counts."""
     try:
         # Initialize VADER sentiment analyzer
         sia = SentimentIntensityAnalyzer()
@@ -273,25 +273,13 @@ def analyze_sentiment(questions):
             emoji = sentiment_emojis.get(sentiment, '❓')
             print(f"  {sentiment.replace('_', ' ').title()}: {count} ({emoji})")
         
-        # Convert to emoji text for word cloud
-        emoji_text = []
-        for sentiment, count in sentiment_counts.items():
-            emoji = sentiment_emojis.get(sentiment, '❓')
-            # Scale count for better visualization (each emoji represents multiple occurrences)
-            scaled_count = max(1, count // 3)  # Scale down for better visualization
-            for _ in range(scaled_count):
-                emoji_text.append(emoji)
-        
-        # If no sentiments found, add a neutral emoji
-        if not emoji_text:
-            emoji_text = ['😐'] * 10
-        
-        return ' '.join(emoji_text)
+        # Return the counts directly instead of emoji text
+        return sentiment_counts
         
     except Exception as e:
         print(f"Error in sentiment analysis: {e}")
-        # Return some default emojis if analysis fails
-        return '😐 😊 😞 😐 😊'
+        # Return some default counts if analysis fails
+        return Counter({'neutral': 10, 'positive': 5, 'negative': 3})
 
 def extract_verbs(text, settings=None):
     """Extract only verbs from text using NLTK POS tagging with custom settings."""
@@ -760,7 +748,7 @@ def main():
         if sentiment_analysis:
             filter_type = "sentiment analysis"
             print(f"Processing CSV file: {csv_path} ({filter_type})")
-            processed_text = load_and_process_csv(csv_path, False, False, True, None)
+            sentiment_counts = load_and_process_csv(csv_path, False, False, True, None)
             output_file = 'public/wordcloud_sentiment.png'
         elif question_types:
             filter_type = "question types analysis"
@@ -777,7 +765,9 @@ def main():
             output_file = 'public/wordcloud_verbs.png' if verbs_only else 'public/wordcloud_all.png'
         
         # Generate visualization
-        if question_types:
+        if sentiment_analysis:
+            success = generate_sentiment_bar_chart(sentiment_counts, output_file)
+        elif question_types:
             success = generate_question_types_bar_chart(question_counts, output_file)
         else:
             success = generate_wordcloud(processed_text, output_file)
