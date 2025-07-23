@@ -1,2 +1,3 @@
 Auto-deploy test file - created to verify Vercel auto-deployment is working.
 Timestamp: 2024-01-20
+Second test: Checking webhook connection
