@@ -32,15 +32,12 @@
   ],
   "functions": {
     "api/wordcloud-data.py": {
-      "runtime": "python3.12",
       "maxDuration": 30
     },
     "api/question-types-data.py": {
-      "runtime": "python3.12",
       "maxDuration": 30
     },
     "api/sentiment-data.py": {
-      "runtime": "python3.12",
       "maxDuration": 30
     },
     "api/upload-data.js": {
