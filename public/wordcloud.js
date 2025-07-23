@@ -10,6 +10,13 @@ class WordCloudApp {
 
     async initializeAuth() {
         try {
+            // TEMPORARY BYPASS - skip authentication for now
+            console.log('Bypassing authentication for development');
+            this.initializeElements();
+            this.attachEventListeners();
+            this.handleUserSignedIn();
+            return;
+            
             // Fetch Clerk configuration from server
             const configResponse = await fetch('/api/clerk-config');
             const config = await configResponse.json();
@@ -26,6 +33,7 @@ class WordCloudApp {
             } else {
                 throw new Error('Clerk configuration not found');
             }
+            
         } catch (error) {
             console.error('Failed to initialize Clerk:', error);
             // Show a user-friendly message
@@ -71,14 +79,14 @@ class WordCloudApp {
     }
 
     handleUserSignedIn() {
-        this.user = this.clerk.user;
+        this.user = this.clerk?.user || { firstName: 'Development User' };
         document.getElementById('auth-section').style.display = 'none';
         document.getElementById('main-app').style.display = 'block';
         
         // Update user display
         const userButton = document.getElementById('user-button');
-        if (userButton && this.user) {
-            userButton.textContent = `Welcome, ${this.user.firstName || this.user.emailAddresses[0].emailAddress}!`;
+        if (userButton) {
+            userButton.textContent = `Welcome, ${this.user.firstName || 'Development User'}!`;
         }
         
         this.startApplication();
@@ -233,8 +241,8 @@ class WordCloudApp {
                 console.log(`Fetching all words cloud: URL=${url}`);
             }
             
-            // Get session token for authentication
-            const sessionToken = await this.clerk.session?.getToken();
+            // Get session token for authentication (bypassed for development)
+            const sessionToken = await this.clerk?.session?.getToken() || 'development-bypass';
             
             const response = await fetch(url, {
                 headers: {
@@ -243,8 +251,8 @@ class WordCloudApp {
                 }
             });
             
-            if (response.status === 401) {
-                // Token expired or invalid, redirect to sign in
+            if (response.status === 401 && this.clerk) {
+                // Token expired or invalid, redirect to sign in (only if clerk is available)
                 this.signOut();
                 return;
             }
