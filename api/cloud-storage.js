@@ -1,134 +1,124 @@
-const AWS = require('aws-sdk');
-
-// Configure AWS SDK
-AWS.config.update({
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    region: process.env.AWS_REGION || 'us-east-1'
-});
-
-const s3 = new AWS.S3();
+const { put, list, del, head } = require('@vercel/blob');
 
 /**
- * Upload CSV data to AWS S3
+ * Upload CSV data to Vercel Blob
  */
-async function uploadToS3(data, filename = null) {
-    if (!process.env.AWS_S3_BUCKET) {
-        throw new Error('AWS_S3_BUCKET environment variable not configured');
+async function uploadToBlob(data, filename = null) {
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+        throw new Error('BLOB_READ_WRITE_TOKEN environment variable not configured');
     }
 
-    const bucket = process.env.AWS_S3_BUCKET;
-    const key = filename || `wordcloud-data-${Date.now()}.csv`;
+    const pathname = filename || `wordcloud-data-${Date.now()}.csv`;
     
     // Convert data to CSV string
     const csvContent = convertDataToCsv(data);
     
-    const params = {
-        Bucket: bucket,
-        Key: key,
-        Body: csvContent,
-        ContentType: 'text/csv',
-        Metadata: {
-            'upload-timestamp': new Date().toISOString(),
-            'record-count': data.length.toString(),
-            'source': 'wordcloud-app'
-        }
-    };
-
     try {
-        const result = await s3.upload(params).promise();
+        const blob = await put(pathname, csvContent, {
+            access: 'public',
+            addRandomSuffix: true,
+            contentType: 'text/csv',
+            token: process.env.BLOB_READ_WRITE_TOKEN
+        });
         
         return {
             success: true,
-            location: result.Location,
-            key: result.Key,
-            bucket: result.Bucket,
-            url: `https://${bucket}.s3.amazonaws.com/${key}`,
+            location: blob.url,
+            key: blob.pathname,
+            url: blob.url,
+            downloadUrl: blob.downloadUrl,
             metadata: {
                 uploadTime: new Date().toISOString(),
                 recordCount: data.length,
-                fileSize: Buffer.byteLength(csvContent, 'utf8')
+                fileSize: Buffer.byteLength(csvContent, 'utf8'),
+                pathname: blob.pathname,
+                contentType: blob.contentType
             }
         };
     } catch (error) {
-        console.error('S3 upload error:', error);
-        throw new Error(`Failed to upload to S3: ${error.message}`);
+        console.error('Vercel Blob upload error:', error);
+        throw new Error(`Failed to upload to Vercel Blob: ${error.message}`);
     }
 }
 
 /**
- * Download CSV data from AWS S3
+ * Download CSV data from Vercel Blob
  */
-async function downloadFromS3(key) {
-    if (!process.env.AWS_S3_BUCKET) {
-        throw new Error('AWS_S3_BUCKET environment variable not configured');
+async function downloadFromBlob(urlOrPathname) {
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+        throw new Error('BLOB_READ_WRITE_TOKEN environment variable not configured');
     }
 
-    const params = {
-        Bucket: process.env.AWS_S3_BUCKET,
-        Key: key
-    };
-
     try {
-        const result = await s3.getObject(params).promise();
-        const csvContent = result.Body.toString('utf-8');
+        // First get the blob metadata
+        const blobInfo = await head(urlOrPathname, {
+            token: process.env.BLOB_READ_WRITE_TOKEN
+        });
+        
+        // Fetch the actual content
+        const response = await fetch(blobInfo.url);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const csvContent = await response.text();
         const data = parseCsvContent(csvContent);
         
         return {
             success: true,
             data: data,
             metadata: {
-                lastModified: result.LastModified,
-                contentLength: result.ContentLength,
-                etag: result.ETag
+                lastModified: blobInfo.uploadedAt,
+                contentLength: blobInfo.size,
+                pathname: blobInfo.pathname,
+                url: blobInfo.url
             }
         };
     } catch (error) {
-        console.error('S3 download error:', error);
-        throw new Error(`Failed to download from S3: ${error.message}`);
+        console.error('Vercel Blob download error:', error);
+        throw new Error(`Failed to download from Vercel Blob: ${error.message}`);
     }
 }
 
 /**
- * List all CSV files in the S3 bucket
+ * List all CSV files in the Vercel Blob store
  */
-async function listS3Files() {
-    if (!process.env.AWS_S3_BUCKET) {
-        throw new Error('AWS_S3_BUCKET environment variable not configured');
+async function listBlobFiles() {
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+        throw new Error('BLOB_READ_WRITE_TOKEN environment variable not configured');
     }
 
-    const params = {
-        Bucket: process.env.AWS_S3_BUCKET,
-        Prefix: 'wordcloud-data-'
-    };
-
     try {
-        const result = await s3.listObjectsV2(params).promise();
+        const result = await list({
+            prefix: 'wordcloud-data-',
+            token: process.env.BLOB_READ_WRITE_TOKEN
+        });
         
         return {
             success: true,
-            files: result.Contents.map(obj => ({
-                key: obj.Key,
-                size: obj.Size,
-                lastModified: obj.LastModified,
-                url: `https://${process.env.AWS_S3_BUCKET}.s3.amazonaws.com/${obj.Key}`
+            files: result.blobs.map(blob => ({
+                key: blob.pathname,
+                size: blob.size || 0,
+                lastModified: blob.uploadedAt,
+                url: blob.url,
+                downloadUrl: blob.downloadUrl
             }))
         };
     } catch (error) {
-        console.error('S3 list error:', error);
-        throw new Error(`Failed to list S3 files: ${error.message}`);
+        console.error('Vercel Blob list error:', error);
+        throw new Error(`Failed to list Vercel Blob files: ${error.message}`);
     }
 }
 
 /**
- * Get the latest CSV file from S3
+ * Get the latest CSV file from Vercel Blob
  */
-async function getLatestFromS3() {
+async function getLatestFromBlob() {
     try {
-        const fileList = await listS3Files();
+        const fileList = await listBlobFiles();
         
         if (!fileList.success || fileList.files.length === 0) {
-            return { success: false, error: 'No files found in S3' };
+            return { success: false, error: 'No files found in Vercel Blob' };
         }
 
         // Sort by last modified date, get the newest
@@ -136,7 +126,7 @@ async function getLatestFromS3() {
             new Date(b.lastModified) - new Date(a.lastModified)
         )[0];
 
-        const data = await downloadFromS3(latestFile.key);
+        const data = await downloadFromBlob(latestFile.url);
         
         return {
             success: true,
@@ -145,8 +135,31 @@ async function getLatestFromS3() {
             metadata: data.metadata
         };
     } catch (error) {
-        console.error('Error getting latest S3 file:', error);
+        console.error('Error getting latest Vercel Blob file:', error);
         throw new Error(`Failed to get latest file: ${error.message}`);
+    }
+}
+
+/**
+ * Delete a file from Vercel Blob
+ */
+async function deleteFromBlob(urlOrPathname) {
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+        throw new Error('BLOB_READ_WRITE_TOKEN environment variable not configured');
+    }
+
+    try {
+        await del(urlOrPathname, {
+            token: process.env.BLOB_READ_WRITE_TOKEN
+        });
+        
+        return {
+            success: true,
+            message: 'File deleted successfully'
+        };
+    } catch (error) {
+        console.error('Vercel Blob delete error:', error);
+        throw new Error(`Failed to delete from Vercel Blob: ${error.message}`);
     }
 }
 
@@ -254,12 +267,12 @@ async function uploadToAzure(data, filename) {
  * Main upload function that routes to the appropriate cloud provider
  */
 async function uploadToCloud(data, options = {}) {
-    const { filename, provider = 'aws' } = options;
+    const { filename, provider = 'vercel' } = options;
     
     switch (provider.toLowerCase()) {
-        case 'aws':
-        case 's3':
-            return await uploadToS3(data, filename);
+        case 'vercel':
+        case 'blob':
+            return await uploadToBlob(data, filename);
         case 'gcp':
         case 'google':
             return await uploadToGoogleCloud(data, filename);
@@ -274,19 +287,26 @@ async function uploadToCloud(data, options = {}) {
  * Check if cloud storage is configured
  */
 function isCloudStorageConfigured() {
-    return !!(
-        process.env.AWS_S3_BUCKET &&
-        process.env.AWS_ACCESS_KEY_ID &&
-        process.env.AWS_SECRET_ACCESS_KEY
-    );
+    return !!(process.env.BLOB_READ_WRITE_TOKEN);
 }
+
+// Legacy function names for compatibility
+const uploadToS3 = uploadToBlob;
+const downloadFromS3 = downloadFromBlob;
+const listS3Files = listBlobFiles;
+const getLatestFromS3 = getLatestFromBlob;
 
 module.exports = {
     uploadToCloud,
-    uploadToS3,
-    downloadFromS3,
-    listS3Files,
-    getLatestFromS3,
+    uploadToBlob,
+    uploadToS3, // Legacy compatibility
+    downloadFromBlob,
+    downloadFromS3, // Legacy compatibility
+    listBlobFiles,
+    listS3Files, // Legacy compatibility
+    getLatestFromBlob,
+    getLatestFromS3, // Legacy compatibility
+    deleteFromBlob,
     isCloudStorageConfigured,
     convertDataToCsv,
     parseCsvContent

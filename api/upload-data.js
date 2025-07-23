@@ -2,7 +2,6 @@ const fs = require('fs').promises;
 const path = require('path');
 const { createReadStream, createWriteStream } = require('fs');
 const csv = require('csv-parser');
-const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 
 module.exports = async function handler(req, res) {
   // Set CORS headers
@@ -96,7 +95,7 @@ module.exports = async function handler(req, res) {
 
     // Upload to cloud storage if configured
     let cloudUploadResult = null;
-    if (process.env.AWS_S3_BUCKET || process.env.CLOUD_STORAGE_URL) {
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
       try {
         cloudUploadResult = await uploadToCloudStorage(currentDataPath, finalData);
       } catch (cloudError) {
@@ -146,18 +145,11 @@ async function readCsvFile(filePath) {
 async function writeCsvFile(filePath, data) {
   if (data.length === 0) return;
   
-  // Get headers from first row
-  const headers = Object.keys(data[0]).map(header => ({
-    id: header,
-    title: header
-  }));
-
-  const csvWriter = createCsvWriter({
-    path: filePath,
-    header: headers
-  });
-
-  await csvWriter.writeRecords(data);
+  // Use our built-in CSV conversion function
+  const cloudStorage = require('./cloud-storage');
+  const csvContent = cloudStorage.convertDataToCsv(data);
+  
+  await fs.writeFile(filePath, csvContent, 'utf8');
 }
 
 // Helper function to upload to cloud storage
@@ -177,7 +169,7 @@ async function uploadToCloudStorage(filePath, data) {
       uploaded: true,
       location: result.url,
       key: result.key,
-      bucket: result.bucket,
+      downloadUrl: result.downloadUrl,
       timestamp: new Date().toISOString(),
       recordCount: data.length,
       fileSize: result.metadata.fileSize

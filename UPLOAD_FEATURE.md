@@ -1,5 +1,11 @@
 # 📤 Data Upload Feature
 
+## 🚨 Migration Note
+**Updated to use Vercel Blob storage** instead of AWS S3. If migrating from the previous version:
+1. Remove AWS environment variables: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_S3_BUCKET`, `AWS_REGION`
+2. Add Vercel Blob token: `BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxxxxxxxxxxxx`
+3. Your existing local data files remain unchanged
+
 ## Overview
 The upload feature allows you to dynamically add new CSV data to your word cloud application with automatic deduplication and cloud storage backup.
 
@@ -11,7 +17,7 @@ The upload feature allows you to dynamically add new CSV data to your word cloud
 - **Conflict resolution**: Shows detailed stats on duplicates vs new records
 
 ### ☁️ **Cloud Storage Integration**
-- **AWS S3 support**: Automatic backup to Amazon S3
+- **Vercel Blob support**: Automatic backup to Vercel Blob storage
 - **Extensible**: Ready for Google Cloud & Azure integration
 - **Versioned backups**: Each upload creates a timestamped backup
 
@@ -31,15 +37,12 @@ The upload feature allows you to dynamically add new CSV data to your word cloud
 ### 1. **Basic Upload (Local Only)**
 Just use the upload feature as-is! No configuration needed.
 
-### 2. **Enable Cloud Storage (AWS S3)**
-Set these environment variables in your Vercel dashboard:
+### 2. **Enable Cloud Storage (Vercel Blob)**
+Set this environment variable in your Vercel dashboard:
 
 ```bash
-# Required for S3 integration
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_S3_BUCKET=your-bucket-name
-AWS_REGION=us-east-1
+# Required for Vercel Blob integration
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxxxxxxxxxxxx
 ```
 
 ## 📋 CSV Requirements
@@ -125,7 +128,7 @@ const newData = csvData.filter(row => !existingTimestamps.has(row.Timestamp));
 
 ### **Cloud Storage Flow**
 1. **Local Processing**: Data is processed and stored locally first
-2. **Cloud Backup**: Successfully processed data is uploaded to S3
+2. **Cloud Backup**: Successfully processed data is uploaded to Vercel Blob
 3. **Metadata Tracking**: Upload metadata stored with timestamps
 4. **Error Handling**: Local success guaranteed even if cloud fails
 
@@ -143,19 +146,16 @@ CSV_FILE_PATH=data/demo_feedback.csv  # Path to your data file
 NODE_ENV=production                   # Environment setting
 ```
 
-### **Required for AWS S3 Integration**
+### **Required for Vercel Blob Integration**
 ```bash
-AWS_ACCESS_KEY_ID=AKIA...            # Your AWS access key
-AWS_SECRET_ACCESS_KEY=...            # Your AWS secret key  
-AWS_S3_BUCKET=your-bucket-name       # S3 bucket name
-AWS_REGION=us-east-1                 # AWS region (optional)
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...  # Your Vercel Blob read-write token
 ```
 
 ### **Optional Configuration**
 ```bash
 MAX_UPLOAD_SIZE=10485760             # Max file size (10MB default)
 BACKUP_RETENTION_DAYS=30             # How long to keep backups
-CLOUD_PROVIDER=aws                   # Cloud provider (aws/gcp/azure)
+CLOUD_PROVIDER=vercel               # Cloud provider (vercel/gcp/azure)
 ```
 
 ## 🚨 Troubleshooting
@@ -166,9 +166,9 @@ CLOUD_PROVIDER=aws                   # Cloud provider (aws/gcp/azure)
 - **Data validation**: All rows need Timestamp and Original Question
 
 ### **Cloud Storage Issues**
-- **AWS credentials**: Verify access key and secret are correct
-- **S3 bucket**: Ensure bucket exists and is accessible
-- **Permissions**: AWS user needs s3:PutObject and s3:GetObject permissions
+- **Vercel Blob token**: Verify BLOB_READ_WRITE_TOKEN is correct
+- **Blob store**: Ensure blob store exists and is accessible
+- **Permissions**: Token needs read-write permissions to the blob store
 
 ### **Data Not Appearing**
 - **Refresh word cloud**: Click refresh or wait for auto-refresh
@@ -203,7 +203,7 @@ CLOUD_PROVIDER=aws                   # Cloud provider (aws/gcp/azure)
 1. **Start small**: Test with a few records first
 2. **Use timestamps**: Ensure timestamps are unique and properly formatted
 3. **Preview data**: Always preview before uploading large datasets
-4. **Cloud backup**: Set up S3 for automatic backups
+4. **Cloud backup**: Set up Vercel Blob for automatic backups
 5. **Regular uploads**: Use append mode for incremental updates
 6. **Monitor statistics**: Check upload stats to verify data integrity
 
