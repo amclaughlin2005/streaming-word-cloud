@@ -32,24 +32,17 @@ npm install
 2. The app comes with a sample file: `data/sample_data.csv`
 3. You can replace it with your own data or create a new file
 
-### 3. Set Up Authentication
+### 3. Configure Your Data Source (Optional)
 
-The app now includes Clerk authentication to protect your data:
+You can optionally customize the CSV file path:
 
 1. **Copy the environment template:**
    ```bash
    cp .env.example .env
    ```
 
-2. **Sign up for Clerk (free tier available):**
-   - Go to [Clerk Dashboard](https://dashboard.clerk.com)
-   - Create a new application
-   - Copy your Publishable Key and Secret Key
-
-3. **Configure your .env file:**
+2. **Update the CSV file path if needed:**
    ```
-   CLERK_PUBLISHABLE_KEY=pk_test_your_publishable_key_here
-   CLERK_SECRET_KEY=sk_test_your_secret_key_here
    CSV_FILE_PATH=data/your_data.csv
    PORT=3000
    ```
@@ -62,7 +55,7 @@ npm start
 
 Open your browser and go to `http://localhost:3000`
 
-**First time setup:** You'll be prompted to sign in through Clerk. You can use email/password, Google, or other supported providers.
+The application will start immediately and be accessible without any authentication.
 
 ## 📝 Usage
 
@@ -125,13 +118,10 @@ Modify `server.js` to change:
 ## 🔧 API Endpoints
 
 - `GET /` - Main application page
-- `GET /api/clerk-config` - Returns Clerk configuration
-- `GET /api/wordcloud-data` - Returns processed word cloud data (requires authentication)
-- `GET /api/question-types-data` - Returns question types analysis (requires authentication)
-- `GET /api/sentiment-data` - Returns sentiment analysis (requires authentication)
+- `GET /api/wordcloud-data` - Returns processed word cloud data
+- `GET /api/question-types-data` - Returns question types analysis  
+- `GET /api/sentiment-data` - Returns sentiment analysis
 - `GET /api/health` - Health check endpoint
-
-**Note:** All data endpoints now require valid authentication tokens.
 
 ## 📱 Browser Support
 
@@ -144,17 +134,16 @@ Modify `server.js` to change:
 
 ### Common Issues
 
-1. **"Authentication Setup Required" message**
-   - Make sure you've copied `.env.example` to `.env`
-   - Verify your Clerk keys are correctly set in the `.env` file
-   - Check that your Clerk application is properly configured
+1. **Server connection issues**
+   - Make sure the server is running on the correct port
+   - Try accessing http://127.0.0.1:3000 instead of localhost
+   - Check if port 3000 is already in use
 
 2. **"Failed to load data" error**
    - Check that your CSV file exists at the specified path
    - Verify the CSV_FILE_PATH in your .env file is correct
    - Ensure the CSV file is properly formatted
    - Check file permissions (make sure the app can read the file)
-   - Make sure you're signed in (authentication required)
 
 3. **Empty word cloud**
    - Verify there's text data in your CSV file
@@ -166,11 +155,6 @@ Modify `server.js` to change:
    - Check the polling interval in your .env file
    - Restart the server if changes aren't being detected
 
-5. **Sign-in issues**
-   - Clear your browser cache and cookies
-   - Check that your Clerk publishable key is valid
-   - Verify your Clerk application settings in the dashboard
-
 ### Debug Mode
 
 Set `NODE_ENV=development` to see detailed error logs:
@@ -181,12 +165,10 @@ NODE_ENV=development npm start
 
 ## 🔒 Security Notes
 
-- **Authentication Required**: All data endpoints are now protected with Clerk authentication
-- **Secure Session Management**: User sessions are managed securely through Clerk
-- **CSV files are stored locally** and only accessible to authenticated users
-- **Data processing happens locally** on your machine
+- **No Authentication Required**: All endpoints are publicly accessible
+- **CSV files are stored locally** on the server
+- **Data processing happens locally** on your machine  
 - **Environment Variables**: Keep your `.env` file secure and never commit it to version control
-- **HTTPS Recommended**: For production deployments, use HTTPS to protect authentication tokens
 - Consider file permissions if using sensitive data
 
 ## 🌟 Contributing

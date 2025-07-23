@@ -14,25 +14,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// Authentication middleware for protected routes
-const requireAuth = (req, res, next) => {
-    const sessionToken = req.headers.authorization?.replace('Bearer ', '');
-    
-    // BYPASS authentication entirely for now (development and production)
-    req.auth = { sessionToken: sessionToken || 'bypass-token' };
-    return next();
-    
-    // Original auth logic (disabled for now)
-    /*
-    if (!sessionToken) {
-        return res.status(401).json({ error: 'No authentication token provided' });
-    }
-    
-    // In a production app, you would verify the session token with Clerk
-    req.auth = { sessionToken };
-    next();
-    */
-};
 
 // Common stop words to filter out
 const STOP_WORDS = new Set([
@@ -146,7 +127,7 @@ async function generateWordCloud(verbsOnly = false, questionTypes = false, senti
 
 
 // API Routes
-app.get('/api/wordcloud-data', requireAuth, async (req, res) => {
+app.get('/api/wordcloud-data', async (req, res) => {
     try {
         const verbsOnly = req.query.verbs === 'true';
         
@@ -186,7 +167,7 @@ app.get('/api/wordcloud-data', requireAuth, async (req, res) => {
 });
 
 // API endpoint for question types analysis
-app.get('/api/question-types-data', requireAuth, async (req, res) => {
+app.get('/api/question-types-data', async (req, res) => {
     try {
         console.log('Question types API called');
         const result = await generateWordCloud(false, true, false, null);
@@ -202,7 +183,7 @@ app.get('/api/question-types-data', requireAuth, async (req, res) => {
 });
 
 // API endpoint for sentiment analysis
-app.get('/api/sentiment-data', requireAuth, async (req, res) => {
+app.get('/api/sentiment-data', async (req, res) => {
     try {
         console.log('Sentiment analysis API called');
         const result = await generateWordCloud(false, false, true, null);
@@ -217,12 +198,6 @@ app.get('/api/sentiment-data', requireAuth, async (req, res) => {
     }
 });
 
-// Get Clerk configuration
-app.get('/api/clerk-config', (req, res) => {
-    res.json({ 
-        publishableKey: process.env.CLERK_PUBLISHABLE_KEY || 'pk_test_YOUR_CLERK_PUBLISHABLE_KEY'
-    });
-});
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -234,12 +209,43 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Start server
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-    console.log(`Server also available on http://127.0.0.1:${PORT}`);
-    console.log(`Reading CSV data from: ${process.env.CSV_FILE_PATH || 'data/sample_data.csv'}`);
-    console.log(`Make sure your CSV file exists and contains text data!`);
+// Start server - force IPv4 binding
+const server = app.listen(PORT, '0.0.0.0', () => {
+    const address = server.address();
+    console.log(`✅ Server successfully started!`);
+    console.log(`🌐 Access your app at: http://localhost:${PORT}`);
+    console.log(`🌐 Also available at: http://127.0.0.1:${PORT}`);
+    console.log(`📁 Reading CSV data from: ${process.env.CSV_FILE_PATH || 'data/sample_data.csv'}`);
+    console.log('📊 Make sure your CSV file exists and contains text data!');
+    console.log(`📝 Server is bound to: ${address.address}:${address.port} (${address.family})`);
+});
+
+server.on('error', (err) => {
+    console.error('❌ Server startup error:', err);
+    if (err.code === 'EADDRINUSE') {
+        console.log(`🔄 Port ${PORT} is busy, trying port ${PORT + 1}...`);
+        app.listen(PORT + 1, '0.0.0.0', () => {
+            console.log(`✅ Server started on alternative port: http://localhost:${PORT + 1}`);
+        });
+    }
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+    console.log('\n👋 Shutting down server gracefully...');
+    server.close(() => {
+        console.log('✅ Server closed');
+        process.exit(0);
+    });
+});
+
+// Keep alive
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 module.exports = app; 

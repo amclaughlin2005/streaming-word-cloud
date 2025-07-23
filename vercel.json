@@ -14,6 +14,10 @@
       "dest": "/api/sentiment-data.js"
     },
     {
+      "src": "/api/upload-data",
+      "dest": "/api/upload-data.js"
+    },
+    {
       "src": "/(.*\\.(css|js|png|jpg|jpeg|gif|ico|svg))",
       "dest": "/public/$1"
     },
@@ -30,6 +34,9 @@
       "maxDuration": 30
     },
     "api/sentiment-data.js": {
+      "maxDuration": 30
+    },
+    "api/upload-data.js": {
       "maxDuration": 30
     },
     "api/index.js": {

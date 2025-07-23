@@ -2,102 +2,20 @@ class WordCloudApp {
     constructor() {
         this.autoRefreshInterval = null;
         this.lastTimestamp = null;
-        this.clerk = null;
-        this.user = null;
+        this.currentUploadData = null;
         
-        this.initializeAuth();
+        this.initializeApp();
     }
 
-    async initializeAuth() {
-        try {
-            // BYPASS authentication - skip for both development and production
-            console.log('Bypassing authentication - using development mode');
-            this.initializeElements();
-            this.attachEventListeners();
-            this.handleUserSignedIn();
-            return;
-            
-            // Fetch Clerk configuration from server
-            const configResponse = await fetch('/api/clerk-config');
-            const config = await configResponse.json();
-            
-            if (window.Clerk && config.publishableKey !== 'pk_test_YOUR_CLERK_PUBLISHABLE_KEY') {
-                await window.Clerk.load({
-                    publishableKey: config.publishableKey,
-                });
-                
-                this.clerk = window.Clerk;
-                this.initializeElements();
-                this.attachEventListeners();
-                this.setupAuth();
-            } else {
-                throw new Error('Clerk configuration not found');
-            }
-            
-        } catch (error) {
-            console.error('Failed to initialize Clerk:', error);
-            // Show a user-friendly message
-            document.getElementById('auth-section').innerHTML = `
-                <div class="auth-container">
-                    <h2>Authentication Setup Required</h2>
-                    <p>Please configure your Clerk keys in the .env file</p>
-                    <p>1. Copy .env.example to .env</p>
-                    <p>2. Get your keys from <a href="https://dashboard.clerk.com" target="_blank">Clerk Dashboard</a></p>
-                    <p>3. Update CLERK_PUBLISHABLE_KEY in your .env file</p>
-                </div>
-            `;
-        }
-    }
-
-    async setupAuth() {
-        if (this.clerk.user) {
-            // User is already signed in
-            this.handleUserSignedIn();
-        } else {
-            // User needs to sign in
-            this.showSignIn();
-        }
-
-        // Listen for auth state changes
-        this.clerk.addListener('user', (user) => {
-            if (user) {
-                this.handleUserSignedIn();
-            } else {
-                this.handleUserSignedOut();
-            }
-        });
-    }
-
-    showSignIn() {
-        document.getElementById('auth-section').style.display = 'flex';
-        document.getElementById('main-app').style.display = 'none';
-        
-        // Mount the Clerk sign-in component
-        this.clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
-            routing: 'hash'
-        });
-    }
-
-    handleUserSignedIn() {
-        this.user = this.clerk?.user || { firstName: 'Development User' };
-        document.getElementById('auth-section').style.display = 'none';
-        document.getElementById('main-app').style.display = 'block';
-        
-        // Update user display
-        const userButton = document.getElementById('user-button');
-        if (userButton) {
-            userButton.textContent = `Welcome, ${this.user.firstName || 'Development User'}!`;
-        }
-        
-        window.wordCloudAppInitialized = true;
+    initializeApp() {
+        this.initializeElements();
+        this.attachEventListeners();
         this.startApplication();
     }
 
-    handleUserSignedOut() {
-        this.user = null;
-        this.showSignIn();
-        this.stopAutoRefresh();
-    }
+
+
+
 
     initializeElements() {
         this.wordCloudElement = document.getElementById('wordCloud');
@@ -117,6 +35,23 @@ class WordCloudApp {
         this.closeSettingsBtn = document.getElementById('closeSettings');
         this.applySettingsBtn = document.getElementById('applySettings');
         this.resetSettingsBtn = document.getElementById('resetSettings');
+        
+        // Upload panel elements
+        this.uploadBtn = document.getElementById('uploadBtn');
+        this.uploadPanel = document.getElementById('uploadPanel');
+        this.closeUploadBtn = document.getElementById('closeUpload');
+        this.fileUploadArea = document.getElementById('fileUploadArea');
+        this.csvFile = document.getElementById('csvFile');
+        this.csvTextInput = document.getElementById('csvTextInput');
+        this.uploadDataBtn = document.getElementById('uploadDataBtn');
+        this.previewDataBtn = document.getElementById('previewDataBtn');
+        this.uploadProgress = document.getElementById('uploadProgress');
+        this.progressFill = document.getElementById('progressFill');
+        this.progressText = document.getElementById('progressText');
+        this.uploadResults = document.getElementById('uploadResults');
+        this.uploadStats = document.getElementById('uploadStats');
+        this.dataPreview = document.getElementById('dataPreview');
+        this.previewTable = document.getElementById('previewTable');
         
         // Settings controls
         this.settingsControls = {
@@ -180,23 +115,42 @@ class WordCloudApp {
         this.applySettingsBtn.addEventListener('click', () => this.applySettings());
         this.resetSettingsBtn.addEventListener('click', () => this.resetSettings());
 
+        // Upload panel event listeners
+        this.uploadBtn.addEventListener('click', () => this.showUpload());
+        this.closeUploadBtn.addEventListener('click', () => this.hideUpload());
+        
+        // File upload listeners
+        this.fileUploadArea.addEventListener('click', () => this.csvFile.click());
+        this.fileUploadArea.addEventListener('dragover', (e) => this.handleDragOver(e));
+        this.fileUploadArea.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+        this.fileUploadArea.addEventListener('drop', (e) => this.handleDrop(e));
+        this.csvFile.addEventListener('change', (e) => this.handleFileSelect(e));
+        
+        // Text input listener
+        this.csvTextInput.addEventListener('input', () => this.handleTextInput());
+        
+        // Upload buttons
+        this.uploadDataBtn.addEventListener('click', () => this.uploadData());
+        this.previewDataBtn.addEventListener('click', () => this.previewData());
+
         // Preset buttons
         document.querySelectorAll('[data-preset]').forEach(btn => {
             btn.addEventListener('click', (e) => this.applyPreset(e.target.dataset.preset));
         });
 
-        // Close settings when clicking outside
+        // Close panels when clicking outside
         this.settingsPanel.addEventListener('click', (e) => {
             if (e.target === this.settingsPanel) {
                 this.hideSettings();
             }
         });
+        
+        this.uploadPanel.addEventListener('click', (e) => {
+            if (e.target === this.uploadPanel) {
+                this.hideUpload();
+            }
+        });
 
-        // Sign out button
-        const signOutBtn = document.getElementById('sign-out-btn');
-        if (signOutBtn) {
-            signOutBtn.addEventListener('click', () => this.signOut());
-        }
     }
 
     async startApplication() {
@@ -242,21 +196,11 @@ class WordCloudApp {
                 console.log(`Fetching all words cloud: URL=${url}`);
             }
             
-            // Get session token for authentication (bypassed for development)
-            const sessionToken = await this.clerk?.session?.getToken() || 'development-bypass';
-            
             const response = await fetch(url, {
                 headers: {
-                    'Authorization': `Bearer ${sessionToken}`,
                     'Content-Type': 'application/json'
                 }
             });
-            
-            if (response.status === 401 && this.clerk) {
-                // Token expired or invalid, redirect to sign in (only if clerk is available)
-                this.signOut();
-                return;
-            }
             
             const result = await response.json();
             console.log('API Response:', result);
@@ -369,7 +313,6 @@ class WordCloudApp {
             this.statusDot.classList.add('connected');
         }
     }
-
 
     startAutoRefresh() {
         this.stopAutoRefresh(); // Clear any existing interval
@@ -486,30 +429,291 @@ class WordCloudApp {
         }
     }
 
-    async signOut() {
-        try {
-            await this.clerk.signOut();
-            this.handleUserSignedOut();
-        } catch (error) {
-            console.error('Error signing out:', error);
+    // Upload panel methods
+    showUpload() {
+        this.uploadPanel.style.display = 'block';
+    }
+
+    hideUpload() {
+        this.uploadPanel.style.display = 'none';
+        this.resetUploadPanel();
+    }
+
+    resetUploadPanel() {
+        this.csvFile.value = '';
+        this.csvTextInput.value = '';
+        this.currentUploadData = null;
+        this.uploadDataBtn.disabled = true;
+        this.previewDataBtn.disabled = true;
+        this.uploadProgress.style.display = 'none';
+        this.uploadResults.style.display = 'none';
+        this.dataPreview.style.display = 'none';
+        this.fileUploadArea.classList.remove('dragover');
+    }
+
+    handleDragOver(e) {
+        e.preventDefault();
+        this.fileUploadArea.classList.add('dragover');
+    }
+
+    handleDragLeave(e) {
+        e.preventDefault();
+        this.fileUploadArea.classList.remove('dragover');
+    }
+
+    handleDrop(e) {
+        e.preventDefault();
+        this.fileUploadArea.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            this.processFile(files[0]);
         }
     }
+
+    handleFileSelect(e) {
+        const file = e.target.files[0];
+        if (file) {
+            this.processFile(file);
+        }
+    }
+
+    async processFile(file) {
+        if (!file.type.includes('csv') && !file.name.endsWith('.csv')) {
+            alert('Please select a CSV file');
+            return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+            alert('File size must be less than 10MB');
+            return;
+        }
+
+        try {
+            const text = await file.text();
+            this.parseCsvData(text);
+        } catch (error) {
+            console.error('Error reading file:', error);
+            alert('Error reading file. Please try again.');
+        }
+    }
+
+    handleTextInput() {
+        const text = this.csvTextInput.value.trim();
+        if (text) {
+            this.parseCsvData(text);
+        } else {
+            this.currentUploadData = null;
+            this.uploadDataBtn.disabled = true;
+            this.previewDataBtn.disabled = true;
+        }
+    }
+
+    parseCsvData(csvText) {
+        try {
+            const lines = csvText.trim().split('\n');
+            if (lines.length < 2) {
+                alert('CSV must have at least a header row and one data row');
+                return;
+            }
+
+            // Parse headers
+            const headers = lines[0].split(',').map(h => h.trim().replace(/['"]/g, ''));
+            
+            // Check for required columns
+            if (!headers.includes('Timestamp') || !headers.includes('Original Question')) {
+                alert('CSV must contain "Timestamp" and "Original Question" columns');
+                return;
+            }
+
+            // Parse data rows
+            const data = [];
+            for (let i = 1; i < lines.length; i++) {
+                const values = this.parseCsvLine(lines[i]);
+                if (values.length === headers.length) {
+                    const row = {};
+                    headers.forEach((header, index) => {
+                        row[header] = values[index];
+                    });
+                    
+                    // Validate required fields
+                    if (row.Timestamp && row['Original Question']) {
+                        data.push(row);
+                    }
+                }
+            }
+
+            if (data.length === 0) {
+                alert('No valid data rows found');
+                return;
+            }
+
+            this.currentUploadData = data;
+            this.uploadDataBtn.disabled = false;
+            this.previewDataBtn.disabled = false;
+
+            console.log(`Parsed ${data.length} valid rows`);
+            
+        } catch (error) {
+            console.error('Error parsing CSV:', error);
+            alert('Error parsing CSV. Please check the format.');
+        }
+    }
+
+    parseCsvLine(line) {
+        const values = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            
+            if (char === '"') {
+                inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+                values.push(current.trim());
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        
+        values.push(current.trim());
+        return values.map(v => v.replace(/^["']|["']$/g, ''));
+    }
+
+    previewData() {
+        if (!this.currentUploadData) return;
+
+        const data = this.currentUploadData.slice(0, 10); // Show first 10 rows
+        const headers = Object.keys(data[0]);
+
+        let tableHtml = '<table><thead><tr>';
+        headers.forEach(header => {
+            tableHtml += `<th>${header}</th>`;
+        });
+        tableHtml += '</tr></thead><tbody>';
+
+        data.forEach(row => {
+            tableHtml += '<tr>';
+            headers.forEach(header => {
+                const value = row[header] || '';
+                const truncated = value.length > 50 ? value.substring(0, 47) + '...' : value;
+                tableHtml += `<td title="${value}">${truncated}</td>`;
+            });
+            tableHtml += '</tr>';
+        });
+
+        tableHtml += '</tbody></table>';
+        
+        if (this.currentUploadData.length > 10) {
+            tableHtml += `<p><small>Showing first 10 of ${this.currentUploadData.length} rows</small></p>`;
+        }
+
+        this.previewTable.innerHTML = tableHtml;
+        this.dataPreview.style.display = 'block';
+    }
+
+    async uploadData() {
+        if (!this.currentUploadData) return;
+
+        const mode = document.querySelector('input[name="uploadMode"]:checked').value;
+        
+        try {
+            this.showUploadProgress();
+            this.setProgress(0, 'Preparing upload...');
+
+            this.setProgress(25, 'Uploading data...');
+
+            const response = await fetch('/api/upload-data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    csvData: this.currentUploadData,
+                    mode: mode
+                })
+            });
+
+            this.setProgress(75, 'Processing...');
+
+            const result = await response.json();
+
+            this.setProgress(100, 'Complete!');
+
+            if (result.success) {
+                this.showUploadResults(result);
+                
+                // Refresh word cloud after successful upload
+                setTimeout(() => {
+                    this.fetchAndUpdateWordCloud();
+                }, 1000);
+            } else {
+                throw new Error(result.error || 'Upload failed');
+            }
+
+        } catch (error) {
+            console.error('Upload error:', error);
+            this.hideUploadProgress();
+            alert('Upload failed: ' + error.message);
+        }
+    }
+
+    showUploadProgress() {
+        this.uploadProgress.style.display = 'block';
+    }
+
+    hideUploadProgress() {
+        this.uploadProgress.style.display = 'none';
+    }
+
+    setProgress(percent, text) {
+        this.progressFill.style.width = percent + '%';
+        this.progressText.textContent = text;
+    }
+
+    showUploadResults(result) {
+        this.hideUploadProgress();
+        
+        const stats = result.stats;
+        
+        this.uploadStats.innerHTML = `
+            <div class="stat-item">
+                <div class="stat-number">${stats.totalReceived}</div>
+                <div class="stat-label">Received</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">${stats.newRecordsAdded}</div>
+                <div class="stat-label">Added</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">${stats.duplicatesSkipped}</div>
+                <div class="stat-label">Duplicates</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">${stats.totalRecords}</div>
+                <div class="stat-label">Total Records</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">${stats.cloudUpload === 'success' ? '✅' : '⏭️'}</div>
+                <div class="stat-label">Cloud Backup</div>
+            </div>
+        `;
+        
+        this.uploadResults.style.display = 'block';
+    }
+
 }
 
 // Initialize the application when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    // Ensure the main app is visible and auth section is hidden
-    document.getElementById('auth-section').style.display = 'none';
-    document.getElementById('main-app').style.display = 'block';
-    
     new WordCloudApp();
 });
 
 // Fallback initialization in case DOMContentLoaded doesn't fire
 window.addEventListener('load', () => {
     if (!window.wordCloudAppInitialized) {
-        document.getElementById('auth-section').style.display = 'none';
-        document.getElementById('main-app').style.display = 'block';
         new WordCloudApp();
         window.wordCloudAppInitialized = true;
     }

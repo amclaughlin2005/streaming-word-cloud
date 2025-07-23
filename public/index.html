@@ -5,30 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Streaming Word Cloud</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Clerk JavaScript SDK -->
-    <script src="https://unpkg.com/@clerk/clerk-js@5/dist/clerk.browser.js"></script>
 </head>
 <body>
     <div class="container">
-        <!-- Authentication Section (hidden by default) -->
-        <div id="auth-section" class="auth-section" style="display: none;">
-            <div id="sign-in" class="auth-container">
-                <h2>Sign In to Access Word Cloud</h2>
-                <div id="clerk-sign-in"></div>
-            </div>
-        </div>
-
-        <!-- Main App Section (visible by default) -->
+        <!-- Main App Section -->
         <div id="main-app" class="main-app">
             <header class="header">
                 <div class="header-content">
                     <div class="header-title">
                         <h1>📊 Streaming Word Cloud</h1>
                         <p>Real-time word visualization from CSV data</p>
-                    </div>
-                    <div class="user-section">
-                        <div id="user-button"></div>
-                        <button id="sign-out-btn" class="btn btn-secondary">Sign Out</button>
                     </div>
                 </div>
             </header>
@@ -65,6 +51,96 @@
             </div>
             <div class="settings-toggle">
                 <button id="settingsBtn" class="btn btn-secondary">⚙️ Settings</button>
+            </div>
+            <div class="upload-toggle">
+                <button id="uploadBtn" class="btn btn-admin">📤 Upload Data</button>
+            </div>
+        </div>
+
+        <!-- Upload Panel -->
+        <div id="uploadPanel" class="upload-panel" style="display: none;">
+            <div class="upload-header">
+                <h3>📤 Upload CSV Data</h3>
+                <button id="closeUpload" class="close-btn">×</button>
+            </div>
+            
+            <div class="upload-content">
+                <div class="upload-info">
+                    <h4>Data Requirements</h4>
+                    <ul>
+                        <li><strong>Required columns:</strong> <code>Timestamp</code>, <code>Original Question</code></li>
+                        <li><strong>Format:</strong> CSV file with headers</li>
+                        <li><strong>Deduplication:</strong> Only new timestamps will be added</li>
+                        <li><strong>Backup:</strong> Existing data is automatically backed up</li>
+                    </ul>
+                </div>
+
+                <div class="upload-section">
+                    <h4>Upload Methods</h4>
+                    
+                    <!-- File Upload -->
+                    <div class="upload-method">
+                        <h5>📁 File Upload</h5>
+                        <div class="file-upload-area" id="fileUploadArea">
+                            <input type="file" id="csvFile" accept=".csv" style="display: none;">
+                            <div class="upload-prompt">
+                                <p>Drop CSV file here or <span class="upload-link">click to browse</span></p>
+                                <small>Maximum file size: 10MB</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Text Input -->
+                    <div class="upload-method">
+                        <h5>📝 Direct Input</h5>
+                        <textarea id="csvTextInput" placeholder="Paste CSV data here...
+Timestamp,Original Question,User ID
+2024-01-15 10:30:00,How do I reset my password?,user123
+2024-01-15 10:31:00,What are your business hours?,user456" rows="6"></textarea>
+                    </div>
+
+                    <!-- Upload Options -->
+                    <div class="upload-options">
+                        <label>
+                            <input type="radio" name="uploadMode" value="append" checked>
+                            <strong>Append</strong> - Add new data to existing records
+                        </label>
+                        <label>
+                            <input type="radio" name="uploadMode" value="replace">
+                            <strong>Replace</strong> - Replace all existing data
+                        </label>
+                    </div>
+
+                    <!-- Upload Button -->
+                    <div class="upload-actions">
+                        <button id="uploadDataBtn" class="btn btn-primary" disabled>
+                            📤 Upload Data
+                        </button>
+                        <button id="previewDataBtn" class="btn btn-secondary" disabled>
+                            👁️ Preview Data
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Upload Progress -->
+                <div id="uploadProgress" class="upload-progress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Uploading...</div>
+                </div>
+
+                <!-- Upload Results -->
+                <div id="uploadResults" class="upload-results" style="display: none;">
+                    <h4>📊 Upload Results</h4>
+                    <div id="uploadStats" class="upload-stats"></div>
+                </div>
+
+                <!-- Data Preview -->
+                <div id="dataPreview" class="data-preview" style="display: none;">
+                    <h4>👁️ Data Preview</h4>
+                    <div id="previewTable" class="preview-table"></div>
+                </div>
             </div>
         </div>
 
