@@ -229,8 +229,9 @@ app.get('/', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server also available on http://127.0.0.1:${PORT}`);
     console.log(`Reading CSV data from: ${process.env.CSV_FILE_PATH || 'data/sample_data.csv'}`);
     console.log(`Make sure your CSV file exists and contains text data!`);
 });
