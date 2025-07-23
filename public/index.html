@@ -5,13 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Streaming Word Cloud</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- Clerk JavaScript SDK -->
+    <script src="https://unpkg.com/@clerk/clerk-js@5/dist/clerk.browser.js"></script>
 </head>
 <body>
     <div class="container">
-        <header class="header">
-            <h1>📊 Streaming Word Cloud</h1>
-            <p>Real-time word visualization from CSV data</p>
-        </header>
+        <!-- Authentication Section -->
+        <div id="auth-section" class="auth-section">
+            <div id="sign-in" class="auth-container">
+                <h2>Sign In to Access Word Cloud</h2>
+                <div id="clerk-sign-in"></div>
+            </div>
+        </div>
+
+        <!-- Main App Section (hidden until authenticated) -->
+        <div id="main-app" class="main-app" style="display: none;">
+            <header class="header">
+                <div class="header-content">
+                    <div class="header-title">
+                        <h1>📊 Streaming Word Cloud</h1>
+                        <p>Real-time word visualization from CSV data</p>
+                    </div>
+                    <div class="user-section">
+                        <div id="user-button"></div>
+                        <button id="sign-out-btn" class="btn btn-secondary">Sign Out</button>
+                    </div>
+                </div>
+            </header>
 
         <div class="controls">
             <button id="refreshBtn" class="btn btn-primary">🔄 Refresh Now</button>
@@ -110,9 +130,10 @@
             </div>
         </div>
 
-        <footer class="footer">
-            <p>💡 Add text data to your CSV file and watch words come to life!</p>
-        </footer>
+            <footer class="footer">
+                <p>💡 Add text data to your CSV file and watch words come to life!</p>
+            </footer>
+        </div>
     </div>
 
     <script src="wordcloud.js"></script>

@@ -18,11 +18,71 @@ body {
     padding: 20px;
 }
 
+/* Authentication Section */
+.auth-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+}
+
+.auth-container {
+    background: rgba(255,255,255,0.95);
+    padding: 40px;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    text-align: center;
+    min-width: 400px;
+}
+
+.auth-container h2 {
+    color: #333;
+    margin-bottom: 30px;
+    font-size: 1.8rem;
+}
+
+#clerk-sign-in {
+    margin-top: 20px;
+}
+
+/* Main App Section */
+.main-app {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 /* Header */
 .header {
     text-align: center;
     margin-bottom: 30px;
     color: white;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.header-title {
+    flex: 1;
+}
+
+.user-section {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+#user-button {
+    color: white;
+    font-weight: 500;
 }
 
 .header h1 {

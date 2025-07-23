@@ -140,7 +140,7 @@ async function generateWordCloud(verbsOnly = false, questionTypes = false, senti
 
 
 // API Routes
-app.get('/api/wordcloud-data', async (req, res) => {
+app.get('/api/wordcloud-data', requireAuth, async (req, res) => {
     try {
         const verbsOnly = req.query.verbs === 'true';
         
@@ -180,7 +180,7 @@ app.get('/api/wordcloud-data', async (req, res) => {
 });
 
 // API endpoint for question types analysis
-app.get('/api/question-types-data', async (req, res) => {
+app.get('/api/question-types-data', requireAuth, async (req, res) => {
     try {
         console.log('Question types API called');
         const result = await generateWordCloud(false, true, false, null);
@@ -196,7 +196,7 @@ app.get('/api/question-types-data', async (req, res) => {
 });
 
 // API endpoint for sentiment analysis
-app.get('/api/sentiment-data', async (req, res) => {
+app.get('/api/sentiment-data', requireAuth, async (req, res) => {
     try {
         console.log('Sentiment analysis API called');
         const result = await generateWordCloud(false, false, true, null);
