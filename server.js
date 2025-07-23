@@ -14,6 +14,20 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
+// Authentication middleware for protected routes
+const requireAuth = (req, res, next) => {
+    const sessionToken = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!sessionToken) {
+        return res.status(401).json({ error: 'No authentication token provided' });
+    }
+    
+    // In a production app, you would verify the session token with Clerk
+    // For now, we'll just check if it exists
+    req.auth = { sessionToken };
+    next();
+};
+
 // Common stop words to filter out
 const STOP_WORDS = new Set([
     'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from',

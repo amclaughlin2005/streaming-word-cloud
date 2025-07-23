@@ -1,27 +1,29 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "server.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": [
-          "public/**",
-          "data/**",
-          "generate_wordcloud.py",
-          "requirements.txt"
-        ]
-      }
+  "functions": {
+    "api/wordcloud.py": {
+      "runtime": "python3.9"
     }
-  ],
+  },
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/server.js"
+      "src": "/api/wordcloud-data",
+      "dest": "/api/wordcloud.py"
     },
     {
-      "src": "/(.*)",
-      "dest": "/server.js"
+      "src": "/api/question-types-data", 
+      "dest": "/api/wordcloud.py?question-types=true"
+    },
+    {
+      "src": "/api/sentiment-data",
+      "dest": "/api/wordcloud.py?sentiment=true"
+    },
+    {
+      "src": "/",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/(.*\\.(css|js|png|jpg|jpeg|gif|ico))",
+      "dest": "/public/$1"
     }
   ],
   "env": {
