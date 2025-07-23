@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 
-export default function handler(req, res) {
+module.exports = function handler(req, res) {
   // Serve the main HTML file
   const htmlPath = path.join(process.cwd(), 'public', 'index.html');
   
@@ -12,4 +12,4 @@ export default function handler(req, res) {
   } catch (error) {
     res.status(500).json({ error: 'Failed to serve index.html' });
   }
-}
+};

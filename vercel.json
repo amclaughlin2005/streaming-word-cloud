@@ -4,6 +4,10 @@
     {
       "src": "api/*.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "generate_wordcloud.py",
+      "use": "@vercel/python"
     }
   ],
   "routes": [
@@ -29,7 +33,13 @@
     }
   ],
   "functions": {
-    "api/*.js": {
+    "api/wordcloud-data.js": {
+      "maxDuration": 30
+    },
+    "api/question-types-data.js": {
+      "maxDuration": 30
+    },
+    "api/sentiment-data.js": {
       "maxDuration": 30
     }
   },
