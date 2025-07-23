@@ -31,5 +31,10 @@
       "src": "/(.*\\.(css|js|png|jpg|jpeg|gif|ico))",
       "dest": "/public/$1"
     }
-  ]
+  ],
+  "env": {
+    "CSV_FILE_PATH": "data/demo_feedback.csv",
+    "POLLING_INTERVAL": "20000",
+    "NODE_ENV": "production"
+  }
 }
