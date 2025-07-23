@@ -10,16 +10,16 @@
 </head>
 <body>
     <div class="container">
-        <!-- Authentication Section -->
-        <div id="auth-section" class="auth-section">
+        <!-- Authentication Section (hidden by default) -->
+        <div id="auth-section" class="auth-section" style="display: none;">
             <div id="sign-in" class="auth-container">
                 <h2>Sign In to Access Word Cloud</h2>
                 <div id="clerk-sign-in"></div>
             </div>
         </div>
 
-        <!-- Main App Section (hidden until authenticated) -->
-        <div id="main-app" class="main-app" style="display: none;">
+        <!-- Main App Section (visible by default) -->
+        <div id="main-app" class="main-app">
             <header class="header">
                 <div class="header-content">
                     <div class="header-title">

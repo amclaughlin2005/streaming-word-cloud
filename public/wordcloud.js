@@ -89,6 +89,7 @@ class WordCloudApp {
             userButton.textContent = `Welcome, ${this.user.firstName || 'Development User'}!`;
         }
         
+        window.wordCloudAppInitialized = true;
         this.startApplication();
     }
 
@@ -497,5 +498,19 @@ class WordCloudApp {
 
 // Initialize the application when the page loads
 document.addEventListener('DOMContentLoaded', () => {
+    // Ensure the main app is visible and auth section is hidden
+    document.getElementById('auth-section').style.display = 'none';
+    document.getElementById('main-app').style.display = 'block';
+    
     new WordCloudApp();
+});
+
+// Fallback initialization in case DOMContentLoaded doesn't fire
+window.addEventListener('load', () => {
+    if (!window.wordCloudAppInitialized) {
+        document.getElementById('auth-section').style.display = 'none';
+        document.getElementById('main-app').style.display = 'block';
+        new WordCloudApp();
+        window.wordCloudAppInitialized = true;
+    }
 });
