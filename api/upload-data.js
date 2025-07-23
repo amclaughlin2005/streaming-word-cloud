@@ -40,26 +40,52 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // Load existing data for deduplication
-    const currentDataPath = process.env.CSV_FILE_PATH || 'data/demo_feedback.csv';
-    const backupPath = currentDataPath.replace('.csv', '_backup.csv');
-    
+    // Load existing data - try Vercel Blob first, then local file
     let existingData = [];
     let existingTimestamps = new Set();
+    let dataSource = 'none';
     
     try {
-      // Read existing data
-      const fileExists = await fs.access(currentDataPath).then(() => true).catch(() => false);
+      // First, try to load from Vercel Blob (for production)
+      if (process.env.BLOB_READ_WRITE_TOKEN) {
+        try {
+          const cloudStorage = require('./cloud-storage');
+          const blobResult = await cloudStorage.getDataWithInit();
+          
+          if (blobResult.success && blobResult.data) {
+            existingData = blobResult.data;
+            existingTimestamps = new Set(existingData.map(row => row.Timestamp));
+            dataSource = 'vercel-blob';
+            console.log(`Loaded ${existingData.length} existing records from Vercel Blob`);
+          }
+        } catch (blobError) {
+          console.log('Error loading data from Vercel Blob:', blobError.message);
+        }
+      }
       
-      if (fileExists) {
-        existingData = await readCsvFile(currentDataPath);
-        existingTimestamps = new Set(existingData.map(row => row.Timestamp));
+      // If no data from Blob, try local file (for development)
+      if (existingData.length === 0) {
+        const currentDataPath = process.env.CSV_FILE_PATH || 'data/demo_feedback.csv';
         
-        // Create backup before modifying
-        await fs.copyFile(currentDataPath, backupPath);
+        try {
+          const fileExists = await fs.access(currentDataPath).then(() => true).catch(() => false);
+          
+          if (fileExists) {
+            existingData = await readCsvFile(currentDataPath);
+            existingTimestamps = new Set(existingData.map(row => row.Timestamp));
+            dataSource = 'local-file';
+            console.log(`Loaded ${existingData.length} existing records from local file`);
+            
+            // Create backup of local file
+            const backupPath = currentDataPath.replace('.csv', '_backup.csv');
+            await fs.copyFile(currentDataPath, backupPath);
+          }
+        } catch (fileError) {
+          console.log('No local file found:', fileError.message);
+        }
       }
     } catch (error) {
-      console.log('No existing file found, creating new one');
+      console.log('Error loading existing data:', error.message);
     }
 
     // Deduplicate by timestamp
@@ -74,30 +100,41 @@ module.exports = async function handler(req, res) {
           totalReceived: csvData.length,
           duplicatesSkipped: duplicateCount,
           newRecordsAdded: 0,
-          totalRecords: existingData.length
+          totalRecords: existingData.length,
+          dataSource: dataSource
         }
       });
     }
 
-    // Combine data based on mode
+    // Determine final data based on mode
     let finalData;
     if (mode === 'replace') {
       finalData = newData;
     } else {
-      // Sort by timestamp to maintain chronological order
-      finalData = [...existingData, ...newData].sort((a, b) => 
-        new Date(a.Timestamp) - new Date(b.Timestamp)
-      );
+      finalData = [...existingData, ...newData];
     }
 
-    // Write updated data
-    await writeCsvFile(currentDataPath, finalData);
+    // Save to local file (for development)
+    try {
+      const currentDataPath = process.env.CSV_FILE_PATH || 'data/demo_feedback.csv';
+      
+      // Ensure directory exists
+      const dirPath = path.dirname(currentDataPath);
+      await fs.mkdir(dirPath, { recursive: true });
+      
+      await writeCsvFile(currentDataPath, finalData);
+      console.log(`Saved ${finalData.length} records to local file`);
+    } catch (localError) {
+      console.log('Could not save to local file (probably in serverless environment):', localError.message);
+    }
 
     // Upload to cloud storage if configured
     let cloudUploadResult = null;
     if (process.env.BLOB_READ_WRITE_TOKEN) {
       try {
+        const currentDataPath = process.env.CSV_FILE_PATH || 'data/demo_feedback.csv';
         cloudUploadResult = await uploadToCloudStorage(currentDataPath, finalData);
+        console.log('Successfully uploaded to Vercel Blob');
       } catch (cloudError) {
         console.error('Cloud upload failed:', cloudError);
         // Don't fail the request if cloud upload fails
@@ -114,7 +151,8 @@ module.exports = async function handler(req, res) {
         totalRecords: finalData.length,
         mode: mode,
         cloudUpload: cloudUploadResult ? 'success' : 'skipped',
-        backupCreated: true
+        dataSource: dataSource,
+        backupCreated: dataSource === 'local-file'
       },
       timestamp: new Date().toISOString()
     });

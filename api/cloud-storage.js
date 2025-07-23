@@ -290,6 +290,115 @@ function isCloudStorageConfigured() {
     return !!(process.env.BLOB_READ_WRITE_TOKEN);
 }
 
+/**
+ * Initialize Vercel Blob with demo data if no data exists
+ */
+async function initializeDemoData() {
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+        console.log('No Blob token configured, skipping demo data initialization');
+        return { success: false, reason: 'no-token' };
+    }
+
+    try {
+        // Check if data already exists in Vercel Blob
+        const existingData = await getLatestFromBlob();
+        if (existingData.success && existingData.data && existingData.data.length > 0) {
+            console.log(`Vercel Blob already has ${existingData.data.length} records, skipping initialization`);
+            return { success: true, reason: 'data-exists', recordCount: existingData.data.length };
+        }
+    } catch (error) {
+        console.log('No existing data in Vercel Blob, proceeding with demo data initialization');
+    }
+
+    // Demo data to initialize with (a subset of the actual demo data)
+    const demoData = [
+        {
+            "Timestamp": "2024-01-15 09:23:15",
+            "Original Question": "What are the legal requirements for starting a business in California?",
+            "Category": "Business Law",
+            "Complexity": "Medium"
+        },
+        {
+            "Timestamp": "2024-01-15 10:45:32",
+            "Original Question": "How do I file for divorce in New York state?",
+            "Category": "Family Law", 
+            "Complexity": "High"
+        },
+        {
+            "Timestamp": "2024-01-15 11:12:08",
+            "Original Question": "What is the statute of limitations for personal injury claims?",
+            "Category": "Personal Injury",
+            "Complexity": "Medium"
+        },
+        {
+            "Timestamp": "2024-01-15 14:30:45",
+            "Original Question": "Can my landlord evict me without notice?",
+            "Category": "Housing Law",
+            "Complexity": "Medium"
+        },
+        {
+            "Timestamp": "2024-01-15 16:20:12",
+            "Original Question": "How do I trademark my business name?",
+            "Category": "Intellectual Property",
+            "Complexity": "High"
+        }
+    ];
+
+    try {
+        const result = await uploadToBlob(demoData, 'demo-data-initialization.csv');
+        console.log(`Successfully initialized Vercel Blob with ${demoData.length} demo records`);
+        
+        return {
+            success: true,
+            reason: 'initialized',
+            recordCount: demoData.length,
+            url: result.url
+        };
+    } catch (error) {
+        console.error('Failed to initialize demo data:', error);
+        return {
+            success: false,
+            reason: 'upload-failed',
+            error: error.message
+        };
+    }
+}
+
+/**
+ * Get data with automatic initialization if needed
+ */
+async function getDataWithInit() {
+    try {
+        // First try to get existing data
+        const result = await getLatestFromBlob();
+        
+        if (result.success && result.data && result.data.length > 0) {
+            return result;
+        }
+        
+        // If no data exists, initialize with demo data
+        console.log('No data found, initializing with demo data...');
+        const initResult = await initializeDemoData();
+        
+        if (initResult.success) {
+            // Try to get the data again after initialization
+            return await getLatestFromBlob();
+        } else {
+            return {
+                success: false,
+                error: 'Failed to initialize demo data',
+                initResult: initResult
+            };
+        }
+    } catch (error) {
+        console.error('Error in getDataWithInit:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
 // Legacy function names for compatibility
 const uploadToS3 = uploadToBlob;
 const downloadFromS3 = downloadFromBlob;
@@ -309,5 +418,7 @@ module.exports = {
     deleteFromBlob,
     isCloudStorageConfigured,
     convertDataToCsv,
-    parseCsvContent
+    parseCsvContent,
+    initializeDemoData,
+    getDataWithInit
 }; 
