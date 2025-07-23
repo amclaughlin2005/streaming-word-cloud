@@ -12,6 +12,24 @@ from nltk.tokenize import word_tokenize, sent_tokenize
 from nltk.tag import pos_tag
 from nltk.sentiment import SentimentIntensityAnalyzer
 
+# Download required NLTK data for deployment
+def ensure_nltk_data():
+    """Download required NLTK data packages if not already present."""
+    try:
+        nltk.data.find('tokenizers/punkt_tab')
+    except LookupError:
+        nltk.download('punkt_tab', quiet=True)
+    
+    try:
+        nltk.data.find('taggers/averaged_perceptron_tagger_eng')
+    except LookupError:
+        nltk.download('averaged_perceptron_tagger_eng', quiet=True)
+    
+    try:
+        nltk.data.find('vader_lexicon')
+    except LookupError:
+        nltk.download('vader_lexicon', quiet=True)
+
 # Common stop words to filter out
 STOP_WORDS = {
     'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from',
@@ -698,6 +716,9 @@ def parse_settings_from_args():
 
 def main():
     """Main function to generate word cloud from CSV data."""
+    # Ensure NLTK data is available
+    ensure_nltk_data()
+    
     # Get CSV file path from environment or use default
     csv_path = os.environ.get('CSV_FILE_PATH', 'data/sample_data.csv')
     
