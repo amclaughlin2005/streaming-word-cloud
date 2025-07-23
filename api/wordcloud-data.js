@@ -1,6 +1,7 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
 module.exports = async function handler(req, res) {
   // Set CORS headers
@@ -17,13 +18,56 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
+  let tempFilePath = null;
+
   try {
     console.log('API called with query:', req.query);
     
     // Determine which type of word cloud to generate
     const verbsOnly = req.query.verbs === 'true';
-    const csvPath = process.env.CSV_FILE_PATH || 'data/demo_feedback.csv';
     
+    // Get data from Vercel Blob or local file
+    let csvData = [];
+    let csvPath = process.env.CSV_FILE_PATH || 'data/demo_feedback.csv';
+    
+    try {
+      // First try to get data from Vercel Blob (for production)
+      if (process.env.BLOB_READ_WRITE_TOKEN) {
+        console.log('Loading data from Vercel Blob...');
+        const cloudStorage = require('./cloud-storage');
+        const blobResult = await cloudStorage.getDataWithInit();
+        
+        if (blobResult.success && blobResult.data && blobResult.data.length > 0) {
+          csvData = blobResult.data;
+          console.log(`Loaded ${csvData.length} records from Vercel Blob`);
+          
+          // Create temporary file for Python script
+          tempFilePath = path.join(os.tmpdir(), `wordcloud_data_${Date.now()}.csv`);
+          const csvContent = cloudStorage.convertDataToCsv(csvData);
+          fs.writeFileSync(tempFilePath, csvContent);
+          csvPath = tempFilePath;
+          console.log(`Created temporary CSV file: ${tempFilePath}`);
+        }
+      }
+      
+      // If no data from Blob, check if local file exists (for development)
+      if (csvData.length === 0 && fs.existsSync(csvPath)) {
+        console.log(`Using local CSV file: ${csvPath}`);
+      } else if (csvData.length === 0) {
+        throw new Error(`No data available. CSV file not found: ${csvPath}`);
+      }
+      
+    } catch (dataError) {
+      console.error('Error loading data:', dataError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to load data for word cloud generation',
+        details: dataError.message,
+        CSV_FILE_PATH: csvPath,
+        hasBlob: !!process.env.BLOB_READ_WRITE_TOKEN
+      });
+    }
+
     // Set up Python environment
     const env = {
       ...process.env,
@@ -31,12 +75,7 @@ module.exports = async function handler(req, res) {
       VERBS_ONLY: verbsOnly ? 'true' : 'false'
     };
 
-    // Run the Python word cloud generation script
-    const pythonScript = verbsOnly ? 
-      'CSV_FILE_PATH=' + csvPath + ' VERBS_ONLY=true python3 generate_wordcloud.py --verbs-only' :
-      'CSV_FILE_PATH=' + csvPath + ' python3 generate_wordcloud.py';
-
-    console.log('Running Python script:', pythonScript);
+    console.log(`Running Python script with CSV_FILE_PATH: ${csvPath}`);
 
     return new Promise((resolve, reject) => {
       const pythonProcess = spawn('python3', ['generate_wordcloud.py', verbsOnly ? '--verbs-only' : ''], {
@@ -60,6 +99,16 @@ module.exports = async function handler(req, res) {
       pythonProcess.on('close', (code) => {
         console.log('Python process exited with code:', code);
         
+        // Clean up temporary file
+        if (tempFilePath && fs.existsSync(tempFilePath)) {
+          try {
+            fs.unlinkSync(tempFilePath);
+            console.log('Cleaned up temporary file:', tempFilePath);
+          } catch (cleanupError) {
+            console.warn('Failed to cleanup temp file:', cleanupError.message);
+          }
+        }
+        
         if (code === 0) {
           // Check which file was generated
           const expectedFile = verbsOnly ? 'public/wordcloud_verbs.png' : 'public/wordcloud_all.png';
@@ -70,7 +119,9 @@ module.exports = async function handler(req, res) {
               success: true,
               imagePath: imagePath,
               timestamp: new Date().toISOString(),
-              mode: verbsOnly ? 'verbs' : 'all'
+              mode: verbsOnly ? 'verbs' : 'all',
+              dataSource: tempFilePath ? 'vercel-blob' : 'local-file',
+              recordCount: csvData.length
             };
             console.log('Returning result:', result);
             res.status(200).json(result);
@@ -82,7 +133,9 @@ module.exports = async function handler(req, res) {
               error: 'Word cloud image was not generated',
               expectedFile,
               pythonOutput: output,
-              pythonError: errorOutput
+              pythonError: errorOutput,
+              csvPath: csvPath,
+              dataSource: tempFilePath ? 'vercel-blob' : 'local-file'
             });
             resolve();
           }
@@ -93,7 +146,9 @@ module.exports = async function handler(req, res) {
             error: 'Failed to generate word cloud',
             code,
             output,
-            errorOutput
+            errorOutput,
+            csvPath: csvPath,
+            dataSource: tempFilePath ? 'vercel-blob' : 'local-file'
           });
           resolve();
         }
@@ -101,10 +156,23 @@ module.exports = async function handler(req, res) {
 
       pythonProcess.on('error', (error) => {
         console.error('Failed to start Python process:', error);
+        
+        // Clean up temporary file on error
+        if (tempFilePath && fs.existsSync(tempFilePath)) {
+          try {
+            fs.unlinkSync(tempFilePath);
+            console.log('Cleaned up temporary file after error:', tempFilePath);
+          } catch (cleanupError) {
+            console.warn('Failed to cleanup temp file after error:', cleanupError.message);
+          }
+        }
+        
         res.status(500).json({
           success: false,
           error: 'Failed to start word cloud generation process',
-          details: error.message
+          details: error.message,
+          csvPath: csvPath,
+          dataSource: tempFilePath ? 'vercel-blob' : 'local-file'
         });
         resolve();
       });
@@ -112,6 +180,17 @@ module.exports = async function handler(req, res) {
 
   } catch (error) {
     console.error('API error:', error);
+    
+    // Clean up temporary file on error
+    if (tempFilePath && fs.existsSync(tempFilePath)) {
+      try {
+        fs.unlinkSync(tempFilePath);
+        console.log('Cleaned up temporary file after error:', tempFilePath);
+      } catch (cleanupError) {
+        console.warn('Failed to cleanup temp file after error:', cleanupError.message);
+      }
+    }
+    
     res.status(500).json({
       success: false,
       error: error.message || 'Internal server error'
