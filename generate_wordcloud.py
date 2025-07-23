@@ -451,6 +451,129 @@ def generate_wordcloud(text, output_path='public/wordcloud.png', width=800, heig
     print(f"Word cloud saved to: {output_path}")
     return True
 
+def generate_sentiment_bar_chart(sentiment_counts, output_path, width=800, height=900):
+    """Generate a colorized sentiment visualization bar chart."""
+    try:
+        import matplotlib.patches as patches
+        
+        # Define color mapping for sentiments
+        emoji_colors = {
+            'very_positive': '#FF69B4',    # Hot pink for very positive
+            'positive': '#32CD32',    # Lime green for positive
+            'neutral': '#808080',    # Gray for neutral
+            'negative': '#FF8C00',    # Dark orange for negative
+            'very_negative': '#DC143C'     # Crimson red for very negative
+        }
+        
+        # Define sentiment names and emojis for better labels
+        emoji_info = {
+            'very_positive': {'label': 'Very Positive', 'emoji': '😍'},
+            'positive': {'label': 'Positive', 'emoji': '😊'}, 
+            'neutral': {'label': 'Neutral', 'emoji': '😐'},
+            'negative': {'label': 'Negative', 'emoji': '😞'},
+            'very_negative': {'label': 'Very Negative', 'emoji': '😡'}
+        }
+        
+        # Create a horizontal bar chart visualization
+        fig, ax = plt.subplots(figsize=(width/100, height/100))
+        fig.patch.set_facecolor('white')
+        ax.set_facecolor('white')
+        
+        # Add title
+        ax.text(0.5, 0.95, 'Customer Sentiment Analysis', 
+               fontsize=24, ha='center', va='center', weight='bold',
+               transform=ax.transAxes, color='#333333')
+        
+        # Calculate proportions and set up horizontal bar chart area
+        total_count = sum(sentiment_counts.values())
+        if total_count == 0:
+            return False
+            
+        # Define chart area (leave space for title and footer)
+        chart_top = 0.88
+        chart_bottom = 0.12
+        chart_height = chart_top - chart_bottom
+        chart_left = 0.30  # More space for emoji and labels on left
+        chart_right = 0.95
+        chart_width = chart_right - chart_left
+        
+        # Sort by count (highest first) for better visual hierarchy
+        sorted_sentiments = sentiment_counts.most_common()
+        num_categories = len(sorted_sentiments)
+        
+        # Calculate bar spacing with more padding
+        if num_categories > 0:
+            bar_spacing = chart_height / num_categories
+            bar_height = bar_spacing * 0.6  # Leave 40% for spacing between bars (more padding)
+        
+        # Start from top and work down
+        y_pos = chart_top - bar_spacing/2
+        
+        for i, (sentiment, count) in enumerate(sorted_sentiments):
+            if sentiment in emoji_colors:
+                # Calculate percentage
+                percentage = (count / total_count) * 100 if total_count > 0 else 0
+                
+                # Get color, label, and emoji for this sentiment
+                color = emoji_colors[sentiment]
+                label = emoji_info[sentiment]['label']
+                emoji = emoji_info[sentiment]['emoji']
+                
+                # Calculate horizontal bar width (proportional to percentage)
+                bar_width = (percentage / 100) * chart_width
+                
+                # Bar position
+                bar_x = chart_left
+                bar_y = y_pos - bar_height/2
+                
+                # Create horizontal colored bar
+                rect = patches.Rectangle((bar_x, bar_y), bar_width, bar_height, 
+                                       linewidth=2, edgecolor=color, 
+                                       facecolor=color, alpha=0.7, 
+                                       transform=ax.transAxes)
+                ax.add_patch(rect)
+                
+                # Add emoji on the far left with padding
+                emoji_size = min(40, max(24, bar_height * 150))
+                ax.text(0.05, y_pos, emoji, 
+                       fontsize=emoji_size, ha='center', va='center',
+                       transform=ax.transAxes)
+                
+                # Add sentiment label with more padding from emoji
+                ax.text(0.28, y_pos, label, 
+                       fontsize=14, ha='right', va='center',
+                       transform=ax.transAxes, color=color, weight='bold')
+                
+                # Add count and percentage at the end of the bar with padding
+                text_x = bar_x + bar_width + 0.02  # More padding from bar end
+                ax.text(text_x, y_pos, f"{count} ({percentage:.1f}%)", 
+                       fontsize=12, ha='left', va='center',
+                       transform=ax.transAxes, color=color, weight='bold')
+                
+                # Move to next position
+                y_pos -= bar_spacing
+        
+        # Add footer with total count
+        ax.text(0.5, 0.05, f'Total responses analyzed: {total_count}', 
+               fontsize=12, ha='center', va='center',
+               transform=ax.transAxes, color='#666666', style='italic')
+        
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
+        ax.axis('off')
+        
+        # Save the image with higher quality
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        plt.savefig(output_path, bbox_inches='tight', dpi=150, facecolor='white')
+        plt.close()
+        
+        print(f"Sentiment analysis bar chart saved to: {output_path}")
+        return True
+        
+    except Exception as e:
+        print(f"Error creating sentiment bar chart: {e}")
+        return False
+
 def generate_emoji_fallback(text, output_path, width=800, height=900):
     """Generate a colorized emoji visualization when WordCloud fails."""
     try:
@@ -773,12 +896,16 @@ def main():
             success = generate_wordcloud(processed_text, output_file)
         
         if success:
-            if question_types:
+            if sentiment_analysis:
+                print("Sentiment analysis bar chart generated successfully!")
+            elif question_types:
                 print("Question types bar chart generated successfully!")
             else:
                 print("Word cloud generated successfully!")
         else:
-            if question_types:
+            if sentiment_analysis:
+                print("Failed to generate sentiment analysis bar chart - no data available")
+            elif question_types:
                 print("Failed to generate question types bar chart - no data available")
             else:
                 print("Failed to generate word cloud - no text data available")
