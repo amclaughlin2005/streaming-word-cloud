@@ -1,5 +1,7 @@
 # 📋 Project Status Summary
 
+> **🚀 NEW: [See REBUILD_PLAN.md](./REBUILD_PLAN.md) for the comprehensive AI-powered rebuild strategy using Vercel's Natural Language Postgres and AI SDK.**
+
 ## ✅ **Fully Implemented & Working**
 
 ### **Core Application**
