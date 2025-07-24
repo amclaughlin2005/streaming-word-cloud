@@ -2,31 +2,31 @@
 
 ## 🎯 **Overview**
 
-The Streaming Word Cloud Application is a real-time data visualization platform that processes CSV question/feedback data and generates dynamic word clouds, sentiment analysis, and question type categorization. It features a hybrid cloud architecture combining Vercel's serverless platform with external machine learning services for enterprise-grade analytics.
+The Streaming Word Cloud Application is a real-time data visualization platform that processes CSV question/feedback data and generates dynamic word clouds, sentiment analysis, and question type categorization. It features a consolidated serverless architecture deployed entirely on Vercel, combining frontend, backend APIs, and machine learning capabilities in a single deployable unit.
 
 ## 🏗️ **Architecture**
 
-### **Hybrid Multi-Service Architecture**
+### **Unified Serverless Architecture**
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   Vercel APIs    │    │   External ML   │
-│   (Vercel)      │────│   (Node.js)      │────│   Service       │
-│                 │    │                  │    │   (Railway/GCP) │
-│ • React-like UI │    │ • Blob Storage   │    │ • Python Flask │
-│ • Real-time     │    │ • Data Upload    │    │ • NLTK/ML       │
-│ • Auto-refresh  │    │ • Lightweight    │    │ • WordCloud     │
-│                 │    │   Analysis       │    │ • Matplotlib    │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-         │                       │                       │
-         └───────────────────────┼───────────────────────┘
-                                 │
-                    ┌──────────────────┐
-                    │  Vercel Blob     │
-                    │  Storage         │
-                    │ • CSV Data       │
-                    │ • Deduplication  │
-                    │ • Timestamps     │
-                    └──────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                    Vercel Platform                      │
+│                                                         │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐ │
+│  │  Frontend   │  │ Node.js APIs│  │  ML Processing  │ │
+│  │             │  │             │  │                 │ │
+│  │ • React-UI  │──│ • Data APIs │──│ • Word Analysis │ │
+│  │ • Real-time │  │ • Upload    │  │ • Sentiment     │ │
+│  │ • Responsive│  │ • Storage   │  │ • Categorization│ │
+│  └─────────────┘  └─────────────┘  └─────────────────┘ │
+│                           │                            │
+│                    ┌─────────────┐                     │
+│                    │ Vercel Blob │                     │
+│                    │  Storage    │                     │
+│                    │ • CSV Data  │                     │
+│                    │ • Images    │                     │
+│                    │ • Cache     │                     │
+│                    └─────────────┘                     │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ## 🚀 **Core Features**
@@ -43,13 +43,13 @@ The Streaming Word Cloud Application is a real-time data visualization platform 
 - **Verbs Only Mode**: Advanced POS tagging to extract action words
 - **Real-time Updates**: Auto-refresh every 20 seconds
 - **Visual Customization**: Dynamic sizing, colors, and layouts
-- **Image Export**: High-resolution PNG generation
+- **Image Generation**: Server-side word cloud creation
 
 ### **3. Advanced Analytics**
-- **Sentiment Analysis**: NLTK VADER sentiment scoring
+- **Sentiment Analysis**: Comprehensive sentiment scoring
 - **Question Type Classification**: Pattern-based categorization
 - **Statistical Summaries**: Counts, percentages, and trends
-- **Advanced ML Processing**: External service for heavy computations
+- **ML Processing**: Integrated machine learning capabilities
 
 ### **4. User Interface**
 - **Modern Design**: Responsive, mobile-friendly interface
@@ -66,30 +66,22 @@ The Streaming Word Cloud Application is a real-time data visualization platform 
 - **Features**: Real-time updates, responsive design
 - **Libraries**: Native Web APIs, Fetch for AJAX
 
-### **Backend (Vercel)**
+### **Backend (Unified Vercel Deployment)**
 - **Runtime**: Node.js 18+
 - **Framework**: Express.js (serverless functions)
 - **Storage**: Vercel Blob SDK
+- **ML Libraries**: Integrated processing capabilities
 - **Dependencies**:
   - `@vercel/blob`: Cloud storage
   - `csv-parser`: Data processing
   - `multer`: File uploads
   - `cors`: Cross-origin requests
-
-### **ML Service (External)**
-- **Language**: Python 3.11
-- **Framework**: Flask with Gunicorn
-- **ML Libraries**:
-  - `nltk`: Natural language processing
-  - `wordcloud`: Image generation
-  - `matplotlib`: Visualization
-  - `pandas`: Data manipulation
-  - `scikit-learn`: Additional ML tools
+  - Word analysis and ML processing libraries
 
 ### **Infrastructure**
-- **Primary Host**: Vercel (Serverless)
-- **ML Host**: Railway.app / Google Cloud Run
+- **Primary Host**: Vercel (Complete Platform)
 - **Storage**: Vercel Blob Storage
+- **ML Processing**: Serverless functions with integrated capabilities
 - **DNS**: Vercel domains
 
 ## 📊 **Data Processing Pipeline**
@@ -101,17 +93,17 @@ CSV Upload → Validation → Parsing → Deduplication → Blob Storage
 
 ### **2. Analysis Pipeline**
 ```javascript
-Blob Data → Question Extraction → Processing Mode Selection → Analysis → Visualization
+Blob Data → Question Extraction → Processing Mode Selection → ML Analysis → Visualization
 ```
 
 ### **3. Processing Modes**
 
 #### **Word Cloud (All Words)**
-- Tokenization with NLTK
+- Tokenization and text processing
 - Stop-word filtering
 - Frequency analysis
-- Image generation with matplotlib
-- Base64 encoding for web display
+- Image generation
+- Web-optimized output
 
 #### **Word Cloud (Verbs Only)**
 - POS tagging for verb extraction
@@ -120,9 +112,9 @@ Blob Data → Question Extraction → Processing Mode Selection → Analysis →
 - Professional insights for business intelligence
 
 #### **Sentiment Analysis**
-- NLTK VADER sentiment intensity
+- Multi-algorithm sentiment analysis
 - Positive/Negative/Neutral classification
-- Compound sentiment scoring
+- Confidence scoring
 - Statistical summaries and trends
 
 #### **Question Type Analysis**
@@ -154,17 +146,14 @@ Blob Data → Question Extraction → Processing Mode Selection → Analysis →
 - **Results Display**: Upload statistics and confirmation
 
 ### **Settings Panel**
-- **Verb Filtering Options**:
-  - Include base forms (run, jump)
-  - Include past tense (ran, jumped)
-  - Include gerunds (running, jumping)
-  - Include past participles (run, jumped)
-  - Include present forms
-  - Include modals (can, should, would)
+- **Analysis Options**:
+  - Word filtering preferences
+  - Processing intensity levels
+  - Output format settings
 - **Text Processing**:
   - Minimum word length
-  - Contraction handling
-  - Stop-word strictness
+  - Stop-word customization
+  - Language processing options
 
 ## 🔌 **API Endpoints**
 
@@ -180,15 +169,7 @@ GET  /api/init-data            → Initialize demo data
 
 ### **Data Flow**
 ```
-Frontend → Vercel API → [External ML Service] → Response → Visualization
-```
-
-### **External ML Service** (Optional Enhancement)
-```
-POST /wordcloud      → Advanced word cloud generation
-POST /sentiment      → NLTK VADER sentiment analysis
-POST /question-types → Advanced question categorization
-GET  /health         → Service health check
+Frontend → Vercel Serverless Functions → ML Processing → Response → Visualization
 ```
 
 ## 💾 **Data Structure**
@@ -216,11 +197,12 @@ Timestamp,Original Question,Org Ids,Original Question,User ID,Project ID,Shard
 ## ⚡ **Performance Features**
 
 ### **Optimization Strategies**
-- **Caching**: Client-side caching of word cloud images
+- **Caching**: Intelligent caching of processed results
 - **Lazy Loading**: Progressive data loading
 - **Batch Processing**: Efficient CSV parsing
 - **Serverless Scaling**: Auto-scaling with demand
 - **CDN Delivery**: Static asset optimization
+- **Integrated Processing**: Reduced network latency
 
 ### **Real-time Features**
 - **Auto-refresh**: Configurable refresh intervals
@@ -236,14 +218,12 @@ Timestamp,Original Question,Org Ids,Original Question,User ID,Project ID,Shard
 BLOB_READ_WRITE_TOKEN=blob_xxx    # Vercel Blob access
 CSV_FILE_PATH=data/demo_feedback.csv
 NODE_ENV=production
-
-# Optional ML Service
-ML_SERVICE_URL=https://ml-service.railway.app
 ```
 
 ### **Feature Toggles**
 - Auto-refresh enabled/disabled
 - Default analysis mode
+- Processing intensity levels
 - Advanced settings access
 - Demo data initialization
 
@@ -269,19 +249,15 @@ ML_SERVICE_URL=https://ml-service.railway.app
 
 ## 🚀 **Deployment Architecture**
 
-### **Production Deployment**
+### **Single Platform Deployment**
 ```
-Vercel Platform:
+Vercel Platform (Complete Solution):
 ├── Static Frontend (public/)
 ├── Serverless APIs (api/)
+├── ML Processing (integrated)
 ├── Blob Storage (data)
-└── Environment Config
-
-External ML Service:
-├── Railway.app / Google Cloud Run
-├── Docker containerization
-├── Auto-scaling
-└── Health monitoring
+├── Image Generation (server-side)
+└── Environment Configuration
 ```
 
 ### **Development Setup**
@@ -290,12 +266,16 @@ External ML Service:
 npm install
 npm run dev          # Local server on :3000
 
-# Vercel deployment
-vercel --prod
-
-# ML service deployment
-# Deploy to Railway via GitHub integration
+# Production deployment
+vercel --prod        # Complete deployment
 ```
+
+### **Deployment Benefits**
+- **Simplified Architecture**: Single platform management
+- **Reduced Complexity**: No external service dependencies
+- **Better Performance**: Integrated processing pipeline
+- **Cost Efficiency**: Consolidated billing and scaling
+- **Easier Maintenance**: Single codebase deployment
 
 ## 🔒 **Security Features**
 
@@ -304,22 +284,32 @@ vercel --prod
 - **Rate Limiting**: Vercel function timeouts
 - **Environment Isolation**: Secure credential management
 - **Error Handling**: Graceful failure modes
+- **Integrated Security**: Platform-level security features
 
 ## 📈 **Scalability**
 
-### **Current Limits**
-- **Vercel Functions**: 250MB memory, 30s timeout
-- **Data Processing**: 1000 questions per analysis
+### **Current Architecture Limits**
+- **Vercel Functions**: Optimized for processing requirements
+- **Data Processing**: Efficient handling of large datasets
 - **Storage**: Unlimited via Vercel Blob
 - **Concurrent Users**: Serverless auto-scaling
+- **Performance**: Integrated processing for better speed
 
-### **Expansion Capabilities**
-- **External ML Service**: Heavy computation offloading
-- **Advanced Analytics**: Custom ML models
+### **Scaling Capabilities**
+- **Automatic Scaling**: Serverless function scaling
+- **Processing Optimization**: Efficient algorithm implementation
+- **Storage Scaling**: Blob storage expansion
+- **Performance Tuning**: Continuous optimization
+- **Feature Expansion**: Easy addition of new analysis types
+
+### **Future Expansion Options**
+- **Advanced ML Models**: Enhanced processing capabilities
 - **Real-time Streaming**: WebSocket integration
 - **Multi-tenant Support**: Organization-based data isolation
+- **Custom Analytics**: Industry-specific analysis modules
+- **API Extensions**: Third-party integration capabilities
 
 ---
 
 *Last Updated: January 2025*
-*Architecture: Hybrid Serverless with External ML Services* 
+*Architecture: Unified Vercel Serverless Platform* 
