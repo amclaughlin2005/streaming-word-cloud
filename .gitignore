@@ -99,3 +99,4 @@ server.log
 
 # NLTK Data (will be downloaded at runtime)
 nltk_data/
+.vercel
