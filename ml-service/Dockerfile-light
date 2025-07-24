@@ -1,0 +1,21 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Copy light requirements and app
+COPY requirements-light.txt requirements.txt
+COPY app-light.py app.py
+
+# Install minimal dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Download NLTK data
+RUN python -c "import nltk; nltk.download('punkt_tab', quiet=True); nltk.download('averaged_perceptron_tagger_eng', quiet=True); nltk.download('vader_lexicon', quiet=True)"
+
+EXPOSE 8080
+
+ENV PORT=8080
+ENV PYTHONUNBUFFERED=1
+
+# Use Flask directly (even lighter than gunicorn)
+CMD ["python", "app.py"] 
