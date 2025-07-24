@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 
-import pandas as pd
+import csv
 import re
 import os
 import sys
 from wordcloud import WordCloud
-import matplotlib
-matplotlib.use('Agg')  # Use non-interactive backend to reduce dependencies
-import matplotlib.pyplot as plt
 from collections import Counter
 import nltk
 from nltk.tokenize import word_tokenize, sent_tokenize
@@ -51,25 +48,28 @@ def load_and_process_csv(csv_path, verbs_only=False, question_types=False, senti
     if not os.path.exists(csv_path):
         raise FileNotFoundError(f"CSV file not found: {csv_path}")
     
-    # Read CSV file
-    df = pd.read_csv(csv_path)
+    # Read CSV file using built-in csv module
+    original_questions = []
+    with open(csv_path, 'r', encoding='utf-8') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            question = row.get('Original Question', '').strip()
+            if question:  # Skip empty questions
+                original_questions.append(question)
     
-    # Check if 'Original Question' column exists
-    if 'Original Question' not in df.columns:
-        raise ValueError("CSV file must contain an 'Original Question' column")
-    
-    # Extract only the 'Original Question' column data
-    original_questions = df['Original Question'].dropna()  # Remove NaN values
+    # Check if we have questions
+    if not original_questions:
+        raise ValueError("CSV file must contain an 'Original Question' column with data")
     
     if sentiment_analysis:
         # Analyze sentiment and return emoji-based text
-        return analyze_sentiment(original_questions)
+        return analyze_sentiment_simple(original_questions)
     elif question_types:
         # Analyze question types instead of processing text normally
-        return analyze_question_types(original_questions)
+        return analyze_question_types_simple(original_questions)
     else:
         # Combine all question text
-        all_text = ' '.join(original_questions.astype(str))
+        all_text = ' '.join(original_questions)
         return process_text(all_text, verbs_only, settings)
 
 def analyze_question_types(questions):

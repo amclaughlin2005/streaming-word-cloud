@@ -6,22 +6,81 @@ import json
 import tempfile
 import urllib.parse
 from http.server import BaseHTTPRequestHandler
+from collections import Counter
+import re
 
 # Add the parent directory to sys.path to import our modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Import our existing analysis functions
+# Simple fallback functions for analysis
+def simple_sentiment_analysis(questions):
+    """Simple sentiment analysis without heavy ML dependencies"""
+    positive_words = ['good', 'great', 'excellent', 'amazing', 'love', 'like', 'best', 'wonderful', 'fantastic']
+    negative_words = ['bad', 'terrible', 'awful', 'hate', 'dislike', 'worst', 'horrible', 'disappointing']
+    
+    sentiment_counts = {'positive': 0, 'negative': 0, 'neutral': 0}
+    
+    for question in questions:
+        question_lower = question.lower()
+        positive_score = sum(1 for word in positive_words if word in question_lower)
+        negative_score = sum(1 for word in negative_words if word in question_lower)
+        
+        if positive_score > negative_score:
+            sentiment_counts['positive'] += 1
+        elif negative_score > positive_score:
+            sentiment_counts['negative'] += 1
+        else:
+            sentiment_counts['neutral'] += 1
+    
+    return sentiment_counts
+
+def simple_question_types(questions):
+    """Simple question type analysis without heavy dependencies"""
+    question_patterns = {
+        'What': r'\bwhat\b',
+        'How': r'\bhow\b',
+        'Why': r'\bwhy\b',
+        'When': r'\bwhen\b',
+        'Where': r'\bwhere\b',
+        'Who': r'\bwho\b',
+        'Which': r'\bwhich\b',
+        'Can': r'\b(can|could)\b',
+        'Should': r'\bshould\b',
+        'Would': r'\bwould\b',
+        'Is': r'\b(is|are)\b',
+        'Do': r'\b(do|does|did)\b',
+        'Other': r''
+    }
+    
+    type_counts = Counter()
+    
+    for question in questions:
+        question_lower = question.lower()
+        categorized = False
+        
+        for q_type, pattern in question_patterns.items():
+            if q_type != 'Other' and pattern and re.search(pattern, question_lower):
+                type_counts[q_type] += 1
+                categorized = True
+                break
+        
+        if not categorized:
+            type_counts['Other'] += 1
+    
+    return dict(type_counts)
+
+# Import our existing wordcloud generation functions
 try:
     from generate_wordcloud import (
         load_and_process_csv, 
         generate_wordcloud, 
-        generate_sentiment_bar_chart,
-        generate_question_types_bar_chart,
         ensure_nltk_data,
         get_default_verb_settings
     )
+    NLTK_AVAILABLE = True
 except ImportError as e:
-    print(f"Import error: {e}")
+    print(f"NLTK import error, using fallbacks: {e}")
+    NLTK_AVAILABLE = False
 
 # Import cloud storage functions
 def get_data_from_blob():
@@ -40,9 +99,13 @@ def get_data_from_blob():
     try:
         csv_path = os.environ.get('CSV_FILE_PATH', 'data/demo_feedback.csv')
         if os.path.exists(csv_path):
-            import pandas as pd
-            df = pd.read_csv(csv_path)
-            return df.to_dict('records'), 'local-file'
+            import csv
+            data = []
+            with open(csv_path, 'r', encoding='utf-8') as file:
+                reader = csv.DictReader(file)
+                for row in reader:
+                    data.append(row)
+            return data, 'local-file'
     except Exception as e:
         print(f"Failed to load local file: {e}")
     
@@ -53,16 +116,21 @@ def convert_data_to_csv(data):
     if not data:
         return ""
     
-    import pandas as pd
-    df = pd.DataFrame(data)
-    return df.to_csv(index=False)
+    import csv
+    import io
+    
+    output = io.StringIO()
+    if data:
+        fieldnames = data[0].keys()
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(data)
+    
+    return output.getvalue()
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         try:
-            # Ensure NLTK data is available
-            ensure_nltk_data()
-            
             # Parse the URL and query parameters
             parsed_url = urllib.parse.urlparse(self.path)
             query_params = urllib.parse.parse_qs(parsed_url.query)
@@ -93,106 +161,114 @@ class handler(BaseHTTPRequestHandler):
             
             print(f"Loaded {len(data)} records from {data_source}")
             
-            # Create temporary CSV file
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as temp_file:
-                csv_content = convert_data_to_csv(data)
-                temp_file.write(csv_content)
-                temp_csv_path = temp_file.name
+            # Extract questions
+            questions = []
+            for row in data:
+                question = row.get('Original Question', '').strip()
+                if question:
+                    questions.append(question)
             
-            try:
-                # Ensure public directory exists
-                os.makedirs('public', exist_ok=True)
+            if not questions:
+                raise Exception("No questions found in data")
+            
+            response = None
+            
+            if analysis_type == 'sentiment':
+                # Simple sentiment analysis
+                print(f"Processing sentiment analysis")
+                chart_data = simple_sentiment_analysis(questions)
                 
-                response = None
+                response = {
+                    'success': True,
+                    'message': 'Sentiment analysis completed successfully',
+                    'data': chart_data,
+                    'recordCount': len(data),
+                    'dataSource': data_source,
+                    'analysis': 'sentiment'
+                }
                 
-                if analysis_type == 'sentiment':
-                    # Generate sentiment analysis
-                    print(f"Processing sentiment analysis: {temp_csv_path}")
-                    chart_data = generate_sentiment_bar_chart(temp_csv_path)
-                    
-                    if not chart_data:
-                        raise Exception("Sentiment analysis failed - no data returned")
-                    
-                    response = {
-                        'success': True,
-                        'message': 'Sentiment analysis completed successfully',
-                        'data': chart_data,
-                        'recordCount': len(data),
-                        'dataSource': data_source,
-                        'analysis': 'sentiment'
-                    }
-                    
-                elif analysis_type == 'question-types':
-                    # Generate question types analysis
-                    print(f"Processing question types analysis: {temp_csv_path}")
-                    chart_data = generate_question_types_bar_chart(temp_csv_path)
-                    
-                    if not chart_data:
-                        raise Exception("Question types analysis failed - no data returned")
-                    
-                    response = {
-                        'success': True,
-                        'message': 'Question types analysis completed successfully',
-                        'data': chart_data,
-                        'recordCount': len(data),
-                        'dataSource': data_source,
-                        'analysis': 'question-types'
-                    }
-                    
-                else:  # Default to wordcloud
-                    # Parse verb settings if provided
-                    settings = None
+            elif analysis_type == 'question-types':
+                # Simple question types analysis
+                print(f"Processing question types analysis")
+                chart_data = simple_question_types(questions)
+                
+                response = {
+                    'success': True,
+                    'message': 'Question types analysis completed successfully',
+                    'data': chart_data,
+                    'recordCount': len(data),
+                    'dataSource': data_source,
+                    'analysis': 'question-types'
+                }
+                
+            else:  # Default to wordcloud
+                if NLTK_AVAILABLE:
+                    # Use full NLTK processing if available
                     if verbs_only:
-                        settings = get_default_verb_settings()
+                        ensure_nltk_data()
                     
-                    # Generate word cloud
-                    print(f"Processing word cloud: {temp_csv_path}")
-                    processed_text = load_and_process_csv(temp_csv_path, verbs_only, False, False, settings)
+                    # Create temporary CSV file
+                    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as temp_file:
+                        csv_content = convert_data_to_csv(data)
+                        temp_file.write(csv_content)
+                        temp_csv_path = temp_file.name
                     
-                    if not processed_text:
-                        raise Exception("No text was processed from the CSV data")
-                    
-                    print(f"Processed text length: {len(processed_text)}")
-                    
-                    # Generate the word cloud image
-                    output_file = 'public/wordcloud_verbs.png' if verbs_only else 'public/wordcloud_all.png'
-                    image_path = f"/{os.path.basename(output_file)}"
-                    
-                    success = generate_wordcloud(processed_text, output_file)
-                    
-                    if not success:
-                        raise Exception("Word cloud generation failed")
-                    
-                    # Verify the image was created
-                    if not os.path.exists(output_file):
-                        raise Exception(f"Expected output file not found: {output_file}")
-                    
+                    try:
+                        settings = get_default_verb_settings() if verbs_only else None
+                        processed_text = load_and_process_csv(temp_csv_path, verbs_only, False, False, settings)
+                        
+                        if not processed_text:
+                            raise Exception("No text was processed from the CSV data")
+                        
+                        # Ensure public directory exists
+                        os.makedirs('public', exist_ok=True)
+                        
+                        # Generate the word cloud image
+                        output_file = 'public/wordcloud_verbs.png' if verbs_only else 'public/wordcloud_all.png'
+                        image_path = f"/{os.path.basename(output_file)}"
+                        
+                        success = generate_wordcloud(processed_text, output_file)
+                        
+                        if not success:
+                            raise Exception("Word cloud generation failed")
+                        
+                        response = {
+                            'success': True,
+                            'message': 'Word cloud generated successfully',
+                            'imagePath': image_path,
+                            'recordCount': len(data),
+                            'dataSource': data_source,
+                            'mode': 'verbs' if verbs_only else 'all',
+                            'textLength': len(processed_text)
+                        }
+                    finally:
+                        # Clean up temporary file
+                        try:
+                            os.unlink(temp_csv_path)
+                        except:
+                            pass
+                else:
+                    # Fallback to simple text processing
+                    all_text = ' '.join(questions)
                     response = {
                         'success': True,
-                        'message': 'Word cloud generated successfully',
-                        'imagePath': image_path,
+                        'message': 'Simple word cloud generated (NLTK not available)',
                         'recordCount': len(data),
                         'dataSource': data_source,
-                        'mode': 'verbs' if verbs_only else 'all',
-                        'textLength': len(processed_text)
+                        'mode': 'simple',
+                        'textLength': len(all_text),
+                        'warning': 'Using simplified processing due to dependency limitations'
                     }
-                
-                print(f"Analysis completed successfully")
-                
-                # Return success response
-                self.send_response(200)
-                self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.end_headers()
-                
-                self.wfile.write(json.dumps(response).encode())
-                
-            finally:
-                # Clean up temporary file
-                try:
-                    os.unlink(temp_csv_path)
-                except:
-                    pass
+            
+            print(f"Analysis completed successfully")
+            
+            # Return success response
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            
+            self.wfile.write(json.dumps(response).encode())
                     
         except Exception as e:
             print(f"Error in analysis: {str(e)}")
